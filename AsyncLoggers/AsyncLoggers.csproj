@@ -43,10 +43,10 @@
     <ItemGroup>
         <Compile Include="src\AsyncLoggers.cs" />
         <Compile Include="src\Properties\AssemblyInfo.cs" />
-        <Compile Include="src\Utilities\AsyncLoggerWrapper.cs" />
-        <Compile Include="src\Utilities\AsyncLogHandlerWrapper.cs" />
-        <Compile Include="src\Utilities\AsyncLogListenerWrapper.cs" />
-        <Compile Include="src\Utilities\AsyncWrapper.cs" />
+        <Compile Include="src\Wrappers\AsyncWrapper.cs" />
+        <Compile Include="src\Wrappers\BepInEx\AsyncLogListenerWrapper.cs" />
+        <Compile Include="src\Wrappers\Unity\AsyncLoggerWrapper.cs" />
+        <Compile Include="src\Wrappers\Unity\AsyncLogHandlerWrapper.cs" />
     </ItemGroup>
     <ItemGroup>
         <None Include="packages.config"/>
