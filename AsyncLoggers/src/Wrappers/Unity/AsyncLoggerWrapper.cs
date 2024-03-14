@@ -2,18 +2,23 @@
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace AsyncLoggers.Utilities
+namespace AsyncLoggers.Wrappers.Unity
 {
     public class AsyncLoggerWrapper : ILogger
     {
-        private readonly AsyncWrapper _asyncWrapper;
+        private readonly IAsyncWrapper _asyncWrapper;
         private readonly ILogger _baseLogger;
 
         public AsyncLoggerWrapper(ILogger baseLogger)
         {
             if (baseLogger is AsyncLoggerWrapper)
                 throw new ArgumentException("Cannot nest AsyncLoggers");
-            _asyncWrapper = new AsyncWrapper();
+            if (AsyncLoggers.PluginConfig.Unity.Scheduler.Value == AsyncLoggers.PluginConfig.AsyncType.Thread)
+                _asyncWrapper = new ThreadWrapper();
+            else
+            {
+                _asyncWrapper = JobWrapper.SINGLETON;
+            }
             _baseLogger = baseLogger;
         }
         

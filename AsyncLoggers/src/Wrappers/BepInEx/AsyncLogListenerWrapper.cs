@@ -1,30 +1,35 @@
 ﻿using System;
 using BepInEx.Logging;
 
-namespace AsyncLoggers.Utilities
+namespace AsyncLoggers.Wrappers.BepInEx
 {
     public class AsyncLogListenerWrapper: ILogListener
     {
         
-        private readonly AsyncWrapper _asyncWrapper;
+        private readonly IAsyncWrapper _threadWrapper;
         private readonly ILogListener _baseListener;
 
         public AsyncLogListenerWrapper(ILogListener baseListener)
         {
             if (baseListener is AsyncLogListenerWrapper)
                 throw new ArgumentException("Cannot nest AsyncLoggers");
-            _asyncWrapper = new AsyncWrapper();
+            if (AsyncLoggers.PluginConfig.BepInEx.Scheduler.Value == AsyncLoggers.PluginConfig.AsyncType.Thread)
+                _threadWrapper = new ThreadWrapper();
+            else
+            {
+                _threadWrapper = JobWrapper.SINGLETON;
+            }
             _baseListener = baseListener;
         }
 
         public void Dispose()
         {
-            _asyncWrapper.Stop();
+            _threadWrapper.Stop();
         }
 
         public void LogEvent(object sender, LogEventArgs eventArgs)
         {
-            _asyncWrapper.Schedule(()=>_baseListener.LogEvent(sender,eventArgs));
+            _threadWrapper.Schedule(()=>_baseListener.LogEvent(sender,eventArgs));
         }
     }
 }

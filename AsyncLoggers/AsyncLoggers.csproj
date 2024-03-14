@@ -12,6 +12,7 @@
         <TargetFrameworkVersion>v4.8.1</TargetFrameworkVersion>
         <FileAlignment>512</FileAlignment>
         <LangVersion>8</LangVersion>
+        <NullableReferenceTypes>true</NullableReferenceTypes>
         <Nullable>warnings</Nullable>
     </PropertyGroup>
     <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
@@ -42,9 +43,12 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="src\AsyncLoggers.cs" />
+        <Compile Include="src\DisruptorUnity3d\Buffer.cs" />
         <Compile Include="src\Properties\AssemblyInfo.cs" />
         <Compile Include="src\Wrappers\AsyncWrapper.cs" />
+        <Compile Include="src\Wrappers\ThreadWrapper.cs" />
         <Compile Include="src\Wrappers\BepInEx\AsyncLogListenerWrapper.cs" />
+        <Compile Include="src\Wrappers\JobWrapper.cs" />
         <Compile Include="src\Wrappers\Unity\AsyncLoggerWrapper.cs" />
         <Compile Include="src\Wrappers\Unity\AsyncLogHandlerWrapper.cs" />
     </ItemGroup>

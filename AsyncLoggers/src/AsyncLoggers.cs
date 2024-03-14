@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
-using AsyncLoggers.Utilities;
+using AsyncLoggers.Wrappers;
+using AsyncLoggers.Wrappers.BepInEx;
+using AsyncLoggers.Wrappers.Unity;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -15,7 +17,7 @@ namespace AsyncLoggers
     {
         public const string GUID = "com.github.mattymatty97.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
-        public const string VERSION = "1.0.0";
+        public const string VERSION = "1.2.0";
 
         internal static ManualLogSource Log;
 
@@ -26,6 +28,7 @@ namespace AsyncLoggers
             try
             {
                     PluginConfig.Init();
+                
                     if (PluginConfig.Unity.Enabled.Value)
                     {
                         Log.LogWarning("Converting unity logger to async!!");
@@ -77,13 +80,27 @@ namespace AsyncLoggers
                         }
                     }
 
+                    Application.wantsToQuit += _OnApplicationQuit;
+
             }
             catch (Exception ex)
             {
                 Log.LogError("Exception while initializing: \n" + ex);
             }
         }
+
+        private bool _OnApplicationQuit()
+        {
+            OnApplicationQuit();
+            return true;
+        }
         
+        private void OnApplicationQuit()
+        {
+            Log.LogWarning($"Closing game!");
+            JobWrapper.SINGLETON.Stop(true);
+        }
+
         public static class PluginConfig
         {
             public static void Init()
@@ -96,7 +113,8 @@ namespace AsyncLoggers
                     ,"convert unity logger to async");
                 Unity.Wrapper = config.Bind("Unity","wrapper",UnityWrapperType.Logger
                     ,"wrapper type to use ( Logger/LogHandler )");
-                
+                Unity.Scheduler = config.Bind("Unity","scheduler",AsyncType.Job
+                    ,"scheduler type to use ( Thread/Job )");
                 //BepInEx
                 BepInEx.Enabled = config.Bind("BepInEx","enabled",true
                     ,"convert BepInEx loggers to async");
@@ -105,7 +123,9 @@ namespace AsyncLoggers
                 BepInEx.Console = config.Bind("BepInEx","console_wrapper",true
                     ,"convert BepInEx console logger to async");
                 BepInEx.Unity = config.Bind("BepInEx","unity_wrapper",true
-                    ,"convert BepInEx unity logger to async");
+                    ,"convert BepInEx unity logger to async");                
+                BepInEx.Scheduler = config.Bind("BepInEx","scheduler",AsyncType.Thread
+                    ,"scheduler type to use ( Thread/Job )");
 
                 //remove unused options
                 PropertyInfo orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -115,11 +135,12 @@ namespace AsyncLoggers
                 orphanedEntries.Clear(); // Clear orphaned entries (Unbinded/Abandoned entries)
                 config.Save(); // Save the config file
             }
-            
+
             public static class Unity
             {
                 public static ConfigEntry<bool> Enabled;
                 public static ConfigEntry<UnityWrapperType> Wrapper;
+                public static ConfigEntry<AsyncType> Scheduler;
             }
             
             [SuppressMessage("ReSharper", "MemberHidesStaticFromOuterClass")]
@@ -129,12 +150,19 @@ namespace AsyncLoggers
                 public static ConfigEntry<bool> Console;
                 public static ConfigEntry<bool> Disk;
                 public static ConfigEntry<bool> Unity;
+                public static ConfigEntry<AsyncType> Scheduler;
             }
 
             public enum UnityWrapperType
             {
                 Logger,
                 LogHandler
+            }
+            
+            public enum AsyncType
+            {
+                Thread,
+                Job
             }
         }
 
