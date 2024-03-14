@@ -17,7 +17,7 @@ namespace AsyncLoggers
     {
         public const string GUID = "com.github.mattymatty97.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
-        public const string VERSION = "1.2.0";
+        public const string VERSION = "1.2.1";
 
         internal static ManualLogSource Log;
 
@@ -108,6 +108,11 @@ namespace AsyncLoggers
                 var config = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, NAME + ".cfg"), true);
                 //Initialize Configs
                 
+                //Scheduler
+                Scheduler.JobBufferSize = config.Bind("Scheduler","job_buffer_size",1024U
+                    ,"maximum size of the log queue for the Job Scheduler ( only one Job scheduler exists! )");
+                Scheduler.ThreadBufferSize = config.Bind("Scheduler","thread_buffer_size",500U
+                    ,"maximum size of the log queue for the Threaded Scheduler ( each logger has a separate one )");
                 //Unity
                 Unity.Enabled = config.Bind("Unity","enabled",true
                     ,"convert unity logger to async");
@@ -134,6 +139,12 @@ namespace AsyncLoggers
 
                 orphanedEntries.Clear(); // Clear orphaned entries (Unbinded/Abandoned entries)
                 config.Save(); // Save the config file
+            }
+            
+            public static class Scheduler
+            {
+                public static ConfigEntry<uint> JobBufferSize;
+                public static ConfigEntry<uint> ThreadBufferSize;
             }
 
             public static class Unity

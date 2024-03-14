@@ -15,12 +15,12 @@ namespace AsyncLoggers.Wrappers
 
         private readonly JobHandle _loggingJob;
         private readonly SemaphoreSlim _semaphore;
-        private readonly Buffer<IAsyncWrapper.LogCallback> _taskBuffer;
+        private readonly RingBuffer<IAsyncWrapper.LogCallback> _taskRingBuffer;
         private volatile RunCondition _shouldRun;
 
         private JobWrapper()
         {
-            _taskBuffer = new Buffer<IAsyncWrapper.LogCallback>(200);
+            _taskRingBuffer = new RingBuffer<IAsyncWrapper.LogCallback>(AsyncLoggers.PluginConfig.Scheduler.JobBufferSize.Value);
             _semaphore = new SemaphoreSlim(0);
             _shouldRun = DefaultCondition;
             _loggingJob = new LogJob().Schedule();
@@ -31,7 +31,7 @@ namespace AsyncLoggers.Wrappers
             if (_shouldRun != DefaultCondition) 
                 return;
             
-            _taskBuffer.Enqueue(callback);
+            _taskRingBuffer.Enqueue(callback);
             _semaphore.Release();
         }
 
@@ -42,7 +42,7 @@ namespace AsyncLoggers.Wrappers
                 _shouldRun = () => false;
             }
             else
-                _shouldRun = () => _taskBuffer.Count > 0;
+                _shouldRun = () => _taskRingBuffer.Count > 0;
         }
         
         private struct LogJob: IJob
@@ -65,7 +65,7 @@ namespace AsyncLoggers.Wrappers
                         if (!_semaphore.Wait(1000))
                             continue;
                         //if (_tasks.TryDequeue(out var task))
-                        if (_taskBuffer.TryDequeue(out var task))
+                        if (_taskRingBuffer.TryDequeue(out var task))
                         {
                             task?.Invoke();
                         }

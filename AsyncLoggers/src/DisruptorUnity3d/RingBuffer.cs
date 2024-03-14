@@ -1,5 +1,4 @@
-﻿using System;
-using System.Runtime.CompilerServices;
+﻿using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 
@@ -10,16 +9,15 @@ namespace DisruptorUnity3d
     With an attempt at Dynamically expand the Queue where needed
     */
     
-    
     /// <summary>
     /// Implementation of the Disruptor pattern
     /// </summary>
     /// <typeparam name="T">the type of item to be stored</typeparam>
-    public class Buffer<T>
+    public class RingBuffer<T>
     {
         private T[] _entries;
-        private int _modMask;
-        private int _capacity;
+        private uint _modMask;
+        private uint _capacity;
         private Volatile.PaddedLong _consumerCursor = new Volatile.PaddedLong();
         private Volatile.PaddedLong _producerCursor = new Volatile.PaddedLong();
 
@@ -28,7 +26,7 @@ namespace DisruptorUnity3d
         /// </summary>
         /// <param name="capacity">The capacity of the buffer</param>
         /// <remarks>Only a single thread may attempt to consume at any one time</remarks>
-        public Buffer(int capacity)
+        public RingBuffer(uint capacity)
         {
             _capacity = NextPowerOfTwo(capacity);
             _modMask = _capacity - 1;
@@ -91,20 +89,14 @@ namespace DisruptorUnity3d
         {
             var next = _producerCursor.ReadAcquireFence() + 1;
     
-            long wrapPoint; 
-            long min;
-            do
+            long wrapPoint = next - _capacity;
+            long min = _consumerCursor.ReadAcquireFence(); 
+
+            while (wrapPoint > min)
             {
-                wrapPoint = next - _entries.Length;
                 min = _consumerCursor.ReadAcquireFence();
-                if (wrapPoint > min)
-                {
-                    _capacity *= 2;
-                    _modMask = _capacity - 1;
-                    Array.Resize(ref _entries, _capacity);
-                    Thread.SpinWait(1);
-                }
-            } while (wrapPoint > min);
+                Thread.SpinWait(1);
+            }
 
             this[next] = item;
             _producerCursor.WriteReleaseFence(next); // makes sure we write the data in _entries before we update the producer cursor
@@ -116,9 +108,9 @@ namespace DisruptorUnity3d
         /// <remarks>for indicative purposes only, may contain stale data</remarks>
         public int Count { get { return (int)(_producerCursor.ReadFullFence() - _consumerCursor.ReadFullFence()); } }
 
-        private static int NextPowerOfTwo(int x)
+        private static uint NextPowerOfTwo(uint x)
         {
-            var result = 2;
+            var result = 2U;
             while (result < x)
             {
                 result <<= 1;

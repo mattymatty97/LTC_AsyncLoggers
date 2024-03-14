@@ -11,14 +11,14 @@ namespace AsyncLoggers.Wrappers
         private readonly Thread _loggingThread;
         private readonly SemaphoreSlim _semaphore;
         //private readonly ConcurrentQueue<LogCallback> _tasks;
-        private readonly Buffer<IAsyncWrapper.LogCallback> _taskBuffer;
+        private readonly RingBuffer<IAsyncWrapper.LogCallback> _taskRingBuffer;
         private static readonly RunCondition DefaultCondition = ()=>true;
         private volatile RunCondition _shouldRun = DefaultCondition;
 
         internal ThreadWrapper()
         {
             //_tasks = new ConcurrentQueue<LogCallback>();
-            _taskBuffer = new Buffer<IAsyncWrapper.LogCallback>(200);
+            _taskRingBuffer = new RingBuffer<IAsyncWrapper.LogCallback>(AsyncLoggers.PluginConfig.Scheduler.ThreadBufferSize.Value);
             _semaphore = new SemaphoreSlim(0);
             _loggingThread = new Thread(LogWorker)
             {
@@ -36,7 +36,7 @@ namespace AsyncLoggers.Wrappers
                     if (!_semaphore.Wait(1000))
                         continue;
                     //if (_tasks.TryDequeue(out var task))
-                    if (_taskBuffer.TryDequeue(out var task))
+                    if (_taskRingBuffer.TryDequeue(out var task))
                     {
                         task?.Invoke();
                     }
@@ -58,7 +58,7 @@ namespace AsyncLoggers.Wrappers
                 return;
             
             //_tasks.Enqueue(callback);
-            _taskBuffer.Enqueue(callback);
+            _taskRingBuffer.Enqueue(callback);
             _semaphore.Release();
         }
 
@@ -71,7 +71,7 @@ namespace AsyncLoggers.Wrappers
             }
             else
                 //_shouldRun = ()=>_tasks.Count > 0;
-                _shouldRun = () => _taskBuffer.Count > 0;
+                _shouldRun = () => _taskRingBuffer.Count > 0;
         }
     }
 }
