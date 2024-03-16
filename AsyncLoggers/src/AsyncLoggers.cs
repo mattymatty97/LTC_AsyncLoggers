@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Reflection;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.BepInEx;
@@ -17,7 +18,7 @@ namespace AsyncLoggers
     {
         public const string GUID = "com.github.mattymatty97.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
-        public const string VERSION = "1.2.2";
+        public const string VERSION = "1.2.4";
 
         internal static ManualLogSource Log;
 
@@ -58,10 +59,10 @@ namespace AsyncLoggers
                     if (PluginConfig.BepInEx.Enabled.Value)
                     {
                         Log.LogWarning("Converting BepInEx loggers to async!!");
-                        var list = (List<ILogListener>)BepInEx.Logging.Logger.Listeners;
-                        for (var i = 0; i < list.Count; i++)
+                        var collection = BepInEx.Logging.Logger.Listeners;
+                        var list = collection.ToList();
+                        foreach (var logger in list)
                         {
-                            var logger = list[i];
                             var isConsole = logger is ConsoleLogListener;
                             var isUnity = logger is UnityLogListener;
                             var isDisk = logger is DiskLogListener;
@@ -76,7 +77,8 @@ namespace AsyncLoggers
                                 continue;
                             
                             Log.LogWarning($"{logger.GetType().Name} Converted");
-                            list[i] = new AsyncLogListenerWrapper(logger);
+                            collection.Remove(logger);
+                            collection.Add(new AsyncLogListenerWrapper(logger));
                         }
                     }
 
