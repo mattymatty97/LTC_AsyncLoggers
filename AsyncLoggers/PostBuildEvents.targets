@@ -23,7 +23,7 @@
 
         <!-- clean referencing -->
     </ItemGroup>
-    
+
     <!-- Ensure the user (you!) has actually set everything up properly. -->
     <Target Name="EnsureGameDirectoryDefined" BeforeTargets="PrepareForBuild">
         <PropertyGroup>
@@ -53,6 +53,7 @@
     <Target Name="CopyToGameFolder" AfterTargets="Build">
         <Message Importance="high" Text="Copying files to game directory."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDirectory)"/>
+        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModDirectory)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(ModDirectory)\%(Assets.RelativeDir)"/>
     </Target>
 
@@ -71,6 +72,7 @@
     <Target Name="PrepareZip" AfterTargets="Build" Condition="$(Configuration.Contains('Release'))">
         <Message Importance="normal" Text="Copying files to temporary directory."/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TempZipDir)\$(ZipStructure)"/>
+        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(TempZipDir)\$(ZipStructure)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(TempZipDir)\$(ZipStructure)\%(Assets.RelativeDir)"/>
         <Copy SourceFiles="@(ThunderStoreItems)" DestinationFolder="$(TempZipDir)\$(ThunderStoreItems)"/>
     </Target>

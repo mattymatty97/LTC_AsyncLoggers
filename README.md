@@ -4,7 +4,10 @@ Async Loggers
 [![GitHub Pre-Release](https://img.shields.io/github/v/release/mattymatty97/LTC_AsyncLoggers?include_prereleases&display_name=release&logo=github&logoColor=white&label=preview)](https://github.com/mattymatty97/LTC_AsyncLoggers/releases)  
 [![Thunderstore Downloads](https://img.shields.io/thunderstore/dt/mattymatty/AsyncLoggers?style=flat&logo=thunderstore&logoColor=white&label=thunderstore)](https://thunderstore.io/c/lethal-company/p/mattymatty/AsyncLoggers/)
 
-YEET the logs to their own thread!
+### YEET the logs to their own thread!
+
+remove any log related delays buy processing them separately from the game stuff.
+the more logs you modpack generates the bigger the impact of this mod will be!
 
 Installation
 ------------

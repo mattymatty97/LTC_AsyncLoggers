@@ -8,22 +8,21 @@ namespace AsyncLoggers.Wrappers
     
     public class JobWrapper: IAsyncWrapper
     {
-        private static readonly RunCondition DefaultCondition = ()=>true;
+        private static readonly RunCondition DefaultCondition = ()=>SINGLETON._taskRingBuffer.Count > 0;
         internal static readonly JobWrapper SINGLETON = new JobWrapper();
         
         private delegate bool RunCondition();
 
-        private readonly JobHandle _loggingJob;
-        private readonly SemaphoreSlim _semaphore;
+        private JobHandle? _loggingJob;
+        private readonly LogJob _loggingJobStruct;
         private readonly RingBuffer<IAsyncWrapper.LogCallback> _taskRingBuffer;
         private volatile RunCondition _shouldRun;
 
         private JobWrapper()
         {
             _taskRingBuffer = new RingBuffer<IAsyncWrapper.LogCallback>(AsyncLoggers.PluginConfig.Scheduler.JobBufferSize.Value);
-            _semaphore = new SemaphoreSlim(0);
             _shouldRun = DefaultCondition;
-            _loggingJob = new LogJob().Schedule();
+            _loggingJobStruct = new LogJob();
         }
 
         public void Schedule(IAsyncWrapper.LogCallback callback)
@@ -32,7 +31,11 @@ namespace AsyncLoggers.Wrappers
                 return;
             
             _taskRingBuffer.Enqueue(callback);
-            _semaphore.Release();
+
+            if (_loggingJob == null || _loggingJob.Value.IsCompleted )
+            {
+                _loggingJob = _loggingJobStruct.Schedule();
+            }
         }
 
         public void Stop(bool immediate=false)
@@ -62,9 +65,6 @@ namespace AsyncLoggers.Wrappers
                 {
                     try
                     {
-                        if (!_semaphore.Wait(1000))
-                            continue;
-                        //if (_tasks.TryDequeue(out var task))
                         if (_taskRingBuffer.TryDequeue(out var task))
                         {
                             task?.Invoke();
@@ -89,7 +89,13 @@ namespace AsyncLoggers.Wrappers
             }
             catch (Exception ex)
             {
-                AsyncLoggers.Log.LogError($"Bad Exception while logging: {ex}");
+                try
+                {
+                    AsyncLoggers.Log.LogError($"Bad Exception while logging: {ex}");}
+                catch (Exception)
+                {
+                    Console.WriteLine($"Exception while logging: {ex}");
+                }
             }
         }
     }

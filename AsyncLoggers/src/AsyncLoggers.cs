@@ -17,7 +17,7 @@ namespace AsyncLoggers
     {
         public const string GUID = "com.github.mattymatty97.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
-        public const string VERSION = "1.2.1";
+        public const string VERSION = "1.2.2";
 
         internal static ManualLogSource Log;
 
@@ -98,7 +98,11 @@ namespace AsyncLoggers
         private void OnApplicationQuit()
         {
             Log.LogWarning($"Closing game!");
-            JobWrapper.SINGLETON.Stop(true);
+            JobWrapper.SINGLETON.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
+            foreach (var logListener in BepInEx.Logging.Logger.Listeners)
+            {
+                (logListener as AsyncLogListenerWrapper)?.Dispose();
+            }
         }
 
         public static class PluginConfig
@@ -113,6 +117,8 @@ namespace AsyncLoggers
                     ,"maximum size of the log queue for the Job Scheduler ( only one Job scheduler exists! )");
                 Scheduler.ThreadBufferSize = config.Bind("Scheduler","thread_buffer_size",500U
                     ,"maximum size of the log queue for the Threaded Scheduler ( each logger has a separate one )");
+                Scheduler.ShutdownType = config.Bind("Scheduler","shutdown_type",ShutdownType.Instant
+                    ,"close immediately or wait for all logs to be written ( Instant/Await ) ");
                 //Unity
                 Unity.Enabled = config.Bind("Unity","enabled",true
                     ,"convert unity logger to async");
@@ -145,6 +151,7 @@ namespace AsyncLoggers
             {
                 public static ConfigEntry<uint> JobBufferSize;
                 public static ConfigEntry<uint> ThreadBufferSize;
+                public static ConfigEntry<ShutdownType> ShutdownType;
             }
 
             public static class Unity
@@ -174,6 +181,11 @@ namespace AsyncLoggers
             {
                 Thread,
                 Job
+            }
+            public enum ShutdownType
+            {
+                Instant,
+                Await
             }
         }
 

@@ -29,25 +29,45 @@ namespace AsyncLoggers.Wrappers
         
         private void LogWorker()
         {
-            while (_shouldRun())
+            try
+            {
+                while (_shouldRun())
+                {
+                    try
+                    {
+                        if (!_semaphore.Wait(1000))
+                            continue;
+                        //if (_tasks.TryDequeue(out var task))
+                        if (_taskRingBuffer.TryDequeue(out var task))
+                        {
+                            task?.Invoke();
+                        }
+                    }
+                    catch (ThreadInterruptedException)
+                    {
+                        _shouldRun = () => false;
+                    }
+                    catch (Exception ex)
+                    {
+                        try
+                        {
+                            AsyncLoggers.Log.LogError($"Exception while logging: {ex}");
+                        }
+                        catch (Exception)
+                        {
+                            Console.WriteLine($"Exception while logging: {ex}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
             {
                 try
                 {
-                    if (!_semaphore.Wait(1000))
-                        continue;
-                    //if (_tasks.TryDequeue(out var task))
-                    if (_taskRingBuffer.TryDequeue(out var task))
-                    {
-                        task?.Invoke();
-                    }
-                }
-                catch (ThreadInterruptedException)
+                    AsyncLoggers.Log.LogError($"Bad Exception while logging: {ex}");}
+                catch (Exception)
                 {
-                    _shouldRun = () => false;
-                }
-                catch (Exception ex)
-                {
-                    AsyncLoggers.Log.LogError($"Exception while logging: {ex}");
+                    Console.WriteLine($"Exception while logging: {ex}");
                 }
             }
         }
