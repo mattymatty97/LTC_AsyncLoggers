@@ -24,7 +24,13 @@ namespace AsyncLoggers.Wrappers.BepInEx
 
         public void Dispose()
         {
-            _threadWrapper.Stop(AsyncLoggers.PluginConfig.Scheduler.ShutdownType.Value == AsyncLoggers.PluginConfig.ShutdownType.Instant);
+            var instant = AsyncLoggers.PluginConfig.Scheduler.ShutdownType.Value ==
+                          AsyncLoggers.PluginConfig.ShutdownType.Instant;
+            if (instant)
+                _baseListener.Dispose();
+            else
+                _threadWrapper.Schedule(()=>_baseListener.Dispose());
+            _threadWrapper.Stop(instant);
         }
 
         public void LogEvent(object sender, LogEventArgs eventArgs)

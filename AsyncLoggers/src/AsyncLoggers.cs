@@ -82,19 +82,13 @@ namespace AsyncLoggers
                         }
                     }
 
-                    Application.wantsToQuit += _OnApplicationQuit;
+                    Application.quitting += OnApplicationQuit;
 
             }
             catch (Exception ex)
             {
                 Log.LogError("Exception while initializing: \n" + ex);
             }
-        }
-
-        private bool _OnApplicationQuit()
-        {
-            OnApplicationQuit();
-            return true;
         }
         
         private void OnApplicationQuit()
