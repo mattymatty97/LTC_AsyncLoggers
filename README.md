@@ -6,8 +6,8 @@ Async Loggers
 
 ### YEET the logs to their own thread!
 
-remove any log related delays buy processing them separately from the game stuff.
-the more logs you modpack generates the bigger the impact of this mod will be!
+remove any log related delays by processing them separately from the game stuff.
+the more logs your modpack generates the bigger the impact this mod has!
 
 Installation
 ------------
