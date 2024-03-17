@@ -1,3 +1,9 @@
+# v1.2.4
+- avoid a cast at startup
+
+# v1.2.3
+- change threads to not background
+
 # v1.2.2
 - small improvements
 - add config to decide the Shutdown Action

@@ -6,7 +6,6 @@ namespace DisruptorUnity3d
 {
     /*
     Code Took from https://github.com/dave-hillier/disruptor-unity3d
-    With an attempt at Dynamically expand the Queue where needed
     */
     
     /// <summary>
@@ -92,10 +91,12 @@ namespace DisruptorUnity3d
             long wrapPoint = next - _capacity;
             long min = _consumerCursor.ReadAcquireFence(); 
 
-            while (wrapPoint > min)
+            while (wrapPoint >= min)
             {
-                min = _consumerCursor.ReadAcquireFence();
+                //overwrite old values if full
+                _consumerCursor.WriteReleaseFence(min + 1);
                 Thread.SpinWait(1);
+                min = _consumerCursor.ReadAcquireFence();
             }
 
             this[next] = item;
@@ -118,7 +119,13 @@ namespace DisruptorUnity3d
             return result;
         }
 
-
+        public void Clear()
+        {
+            if (_producerCursor.ReadFullFence() == 0 && _consumerCursor.ReadFullFence() == 0)
+                return;
+            _producerCursor.WriteFullFence(0);
+            _consumerCursor.WriteFullFence(0);
+        }
     }
     public static class Volatile
     {
