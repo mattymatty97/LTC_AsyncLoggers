@@ -1,3 +1,10 @@
+# v1.2.6
+- dispose of BepInEx loggers when wrapper is disposed
+- use Application.quitting instead of Application.wantsToQuit
+
+# v1.2.5
+- apply circular buffer logic and overwrite older logs
+
 # v1.2.4
 - avoid a cast at startup
 

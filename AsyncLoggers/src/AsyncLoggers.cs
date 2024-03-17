@@ -18,7 +18,7 @@ namespace AsyncLoggers
     {
         public const string GUID = "com.github.mattymatty97.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
-        public const string VERSION = "1.2.5";
+        public const string VERSION = "1.2.6";
 
         internal static ManualLogSource Log;
 

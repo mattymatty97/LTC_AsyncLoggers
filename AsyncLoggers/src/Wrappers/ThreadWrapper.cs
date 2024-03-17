@@ -10,13 +10,13 @@ namespace AsyncLoggers.Wrappers
 
         private readonly Thread _loggingThread;
         private readonly SemaphoreSlim _semaphore;
-        private readonly RingBuffer<IAsyncWrapper.LogCallback> _taskRingBuffer;
+        private readonly ConcurrentCircularBuffer<IAsyncWrapper.LogCallback> _taskRingBuffer;
         private static readonly RunCondition DefaultCondition = ()=>true;
         private volatile RunCondition _shouldRun = DefaultCondition;
 
         internal ThreadWrapper()
         {
-            _taskRingBuffer = new RingBuffer<IAsyncWrapper.LogCallback>(AsyncLoggers.PluginConfig.Scheduler.ThreadBufferSize.Value);
+            _taskRingBuffer = new ConcurrentCircularBuffer<IAsyncWrapper.LogCallback>(AsyncLoggers.PluginConfig.Scheduler.ThreadBufferSize.Value);
             _semaphore = new SemaphoreSlim(0);
             _loggingThread = new Thread(LogWorker);
             _loggingThread.Start();

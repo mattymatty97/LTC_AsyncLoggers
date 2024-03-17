@@ -15,12 +15,12 @@ namespace AsyncLoggers.Wrappers
 
         private JobHandle? _loggingJob;
         private readonly LogJob _loggingJobStruct;
-        private readonly RingBuffer<IAsyncWrapper.LogCallback> _taskRingBuffer;
+        private readonly ConcurrentCircularBuffer<IAsyncWrapper.LogCallback> _taskRingBuffer;
         private volatile RunCondition _shouldRun;
 
         private JobWrapper()
         {
-            _taskRingBuffer = new RingBuffer<IAsyncWrapper.LogCallback>(AsyncLoggers.PluginConfig.Scheduler.JobBufferSize.Value);
+            _taskRingBuffer = new ConcurrentCircularBuffer<IAsyncWrapper.LogCallback>(AsyncLoggers.PluginConfig.Scheduler.JobBufferSize.Value);
             _shouldRun = DefaultCondition;
             _loggingJobStruct = new LogJob();
         }

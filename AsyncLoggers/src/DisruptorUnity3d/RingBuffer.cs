@@ -91,12 +91,10 @@ namespace DisruptorUnity3d
             long wrapPoint = next - _capacity;
             long min = _consumerCursor.ReadAcquireFence(); 
 
-            while (wrapPoint >= min)
+            if (wrapPoint >= min)
             {
                 //overwrite old values if full
-                _consumerCursor.WriteReleaseFence(min + 1);
-                Thread.SpinWait(1);
-                min = _consumerCursor.ReadAcquireFence();
+                _consumerCursor.WriteReleaseFence(wrapPoint + 1);
             }
 
             this[next] = item;
