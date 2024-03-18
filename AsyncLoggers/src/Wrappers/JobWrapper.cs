@@ -69,11 +69,6 @@ namespace AsyncLoggers.Wrappers
                         {
                             task?.Invoke();
                         }
-                        else
-                        {
-                            //reset cursors when we have the occasion
-                            _taskRingBuffer.Clear();
-                        }
                     }
                     catch (ThreadInterruptedException)
                     {

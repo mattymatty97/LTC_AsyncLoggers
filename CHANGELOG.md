@@ -1,3 +1,6 @@
+# v1.2.7
+- use non-unsigned values to calculate the wrapPoint ( make the patch actually work )
+
 # v1.2.6
 - dispose of BepInEx loggers when wrapper is disposed
 - use Application.quitting instead of Application.wantsToQuit

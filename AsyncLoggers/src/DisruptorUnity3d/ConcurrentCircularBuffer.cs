@@ -1,4 +1,6 @@
-﻿namespace DisruptorUnity3d
+﻿using System;
+
+namespace DisruptorUnity3d
 {
     public class ConcurrentCircularBuffer<T>
     {
@@ -6,8 +8,8 @@
         private readonly T[] _entries;
         private readonly uint _modMask;
         private readonly uint _capacity;
-        private ulong _consumerCursor = 0UL;
-        private ulong _producerCursor = 0UL;
+        private uint _consumerCursor = 0U;
+        private uint _producerCursor = 0U;
 
         public ConcurrentCircularBuffer(uint capacity)
         {
@@ -15,23 +17,31 @@
             _modMask = _capacity - 1;
             _entries = new T[_capacity];
         }
-        
-        public T this[ulong index]
+
+        public T this[uint index]
         {
-            get { unchecked {
-                lock (_lock)
+            get
+            {
+                unchecked
                 {
-                    return _entries[index & _modMask];
+                    lock (_lock)
+                    {
+                        return _entries[index & _modMask];
+                    }
                 }
-            } }
-            set { unchecked {
-                lock (_lock)
+            }
+            set
+            {
+                unchecked
                 {
-                    _entries[index & _modMask] = value;
+                    lock (_lock)
+                    {
+                        _entries[index & _modMask] = value;
+                    }
                 }
-            } }
+            }
         }
-        
+
         public bool TryDequeue(out T obj)
         {
             lock (_lock)
@@ -41,27 +51,30 @@
                 if (_producerCursor < next)
                 {
                     obj = default(T);
+                    //reset the cursors so they do not reach the max values
+                    Clear();
                     return false;
                 }
+
                 obj = this[next];
                 _consumerCursor = next;
                 return true;
             }
         }
-        
+
         public void Enqueue(T item)
         {
             lock (_lock)
             {
                 var next = _producerCursor + 1;
 
-                var wrapPoint = next - _capacity;
+                var wrapPoint = (long)next - _capacity;
                 var min = _consumerCursor;
 
                 if (wrapPoint >= min)
                 {
                     //overwrite old values if full
-                    _consumerCursor = wrapPoint + 1;
+                    _consumerCursor = (uint)Math.Max(0, wrapPoint + 1);
                 }
 
                 this[next] = item;
@@ -69,22 +82,15 @@
             }
         }
 
-        public int Count { get {
-            lock (_lock)
-            {
-                return (int)(_producerCursor - _consumerCursor);
-            }
-        } }
-        
-        
-        private static uint NextPowerOfTwo(uint x)
+        public int Count
         {
-            var result = 2U;
-            while (result < x)
+            get
             {
-                result <<= 1;
+                lock (_lock)
+                {
+                    return (int)(_producerCursor - _consumerCursor);
+                }
             }
-            return result;
         }
 
         public void Clear()
@@ -96,6 +102,18 @@
                 _producerCursor = 0;
                 _consumerCursor = 0;
             }
+        }
+
+
+        private static uint NextPowerOfTwo(uint x)
+        {
+            var result = 2U;
+            while (result < x)
+            {
+                result <<= 1;
+            }
+
+            return result;
         }
     }
 }
