@@ -1,15 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading;
 using DisruptorUnity3d;
 using Unity.Jobs;
+using UnityEngine;
 
 namespace AsyncLoggers.Wrappers
 {
     
     public class JobWrapper: IAsyncWrapper
     {
-        private static readonly RunCondition DefaultCondition = ()=>SINGLETON._taskRingBuffer.Count > 0;
-        internal static readonly JobWrapper SINGLETON = new JobWrapper();
+        private static long _IDSeed = 0;
+        private readonly RunCondition DefaultCondition;
+        internal static readonly Dictionary<long,JobWrapper> INSTANCES = new Dictionary<long, JobWrapper>();
         
         private delegate bool RunCondition();
 
@@ -18,11 +21,14 @@ namespace AsyncLoggers.Wrappers
         private readonly ConcurrentCircularBuffer<IAsyncWrapper.LogCallback> _taskRingBuffer;
         private volatile RunCondition _shouldRun;
 
-        private JobWrapper()
+        public JobWrapper()
         {
+            var _id = Interlocked.Add(ref _IDSeed, 1);
+            INSTANCES[_id] = this;
             _taskRingBuffer = new ConcurrentCircularBuffer<IAsyncWrapper.LogCallback>(AsyncLoggers.PluginConfig.Scheduler.JobBufferSize.Value);
+            DefaultCondition = ()=>_taskRingBuffer.Count > 0;
             _shouldRun = DefaultCondition;
-            _loggingJobStruct = new LogJob();
+            _loggingJobStruct = new LogJob(_id);
         }
 
         public void Schedule(IAsyncWrapper.LogCallback callback)
@@ -48,15 +54,23 @@ namespace AsyncLoggers.Wrappers
                 _shouldRun = () => _taskRingBuffer.Count > 0;
         }
         
-        private struct LogJob: IJob
+        private readonly struct LogJob: IJob
         {
+            private readonly long _id;
+
+            public LogJob(long id)
+            {
+                _id = id;
+            }
+
             public void Execute()
             {
-                JobWrapper.SINGLETON.LogWorker();
+                INSTANCES[_id].LogWorker();
             }
         }
         
-
+        
+        [HideInCallstack]
         private void LogWorker()
         {
             try

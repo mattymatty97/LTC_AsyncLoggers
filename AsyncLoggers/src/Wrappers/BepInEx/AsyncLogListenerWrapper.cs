@@ -17,7 +17,7 @@ namespace AsyncLoggers.Wrappers.BepInEx
                 _threadWrapper = new ThreadWrapper();
             else
             {
-                _threadWrapper = JobWrapper.SINGLETON;
+                _threadWrapper = new JobWrapper();
             }
             _baseListener = baseListener;
         }

@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using DisruptorUnity3d;
+using UnityEngine;
 
 namespace AsyncLoggers.Wrappers
 {
@@ -22,6 +24,7 @@ namespace AsyncLoggers.Wrappers
             _loggingThread.Start();
         }
         
+        [HideInCallstack]
         private void LogWorker()
         {
             try

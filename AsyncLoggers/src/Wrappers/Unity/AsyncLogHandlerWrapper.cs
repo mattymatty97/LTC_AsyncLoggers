@@ -17,7 +17,7 @@ namespace AsyncLoggers.Wrappers.Unity
                 _asyncWrapper = new ThreadWrapper();
             else
             {
-                _asyncWrapper = JobWrapper.SINGLETON;
+                _asyncWrapper = new JobWrapper();
             }
             _baseHandler = baseHandler;
         }
@@ -26,7 +26,7 @@ namespace AsyncLoggers.Wrappers.Unity
         {
             _asyncWrapper.Schedule(()=>_baseHandler.LogFormat(logType,context,format,args));
         }
-
+        
         public void LogException(Exception exception, Object context)
         {
             _asyncWrapper.Schedule(()=>_baseHandler.LogException(exception,context));

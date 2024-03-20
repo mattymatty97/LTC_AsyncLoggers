@@ -44,6 +44,7 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="src\AsyncLoggers.cs" />
+        <Compile Include="src\DisruptorUnity3d\AltRingBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\ConcurrentCircularBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\RingBuffer.cs" />
         <Compile Include="src\Properties\AssemblyInfo.cs" />
@@ -55,29 +56,14 @@
         <Compile Include="src\Wrappers\Unity\AsyncLogHandlerWrapper.cs" />
     </ItemGroup>
     <ItemGroup>
-        <None Include="packages.config"/>
-    </ItemGroup>
-    <ItemGroup>
         <Content Include="GameDirectory.targets"/>
         <Content Include="PostBuildEvents.targets"/>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="BepInEx.Core" Version="5.4.21" />
-        <PackageReference Include="BepInEx.Preloader.Core" Version="6.0.0-pre.1" />
-        <PackageReference Include="BepInEx.Unity.Mono.Preloader" Version="6.0.0-be.688" />
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" />
         <PackageReference Include="HarmonyX" Version="2.5.5"/>
         <PackageReference Include="Mono.Cecil" Version="0.11.4"/>
-        <PackageReference Include="MonoMod.RuntimeDetour" Version="21.12.13.1"/>
-        <PackageReference Include="MonoMod.Utils" Version="21.12.13.1"/>
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
-    <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-         Other similar extension points exist, see Microsoft.Common.targets.
-    <Target Name="BeforeBuild">
-    </Target>
-    <Target Name="AfterBuild">
-    </Target>
-    -->
     <Import Project="PostBuildEvents.targets"/>
-
 </Project>

@@ -16,9 +16,9 @@ namespace AsyncLoggers
     [BepInPlugin(GUID, NAME, VERSION)]
     internal class AsyncLoggers : BaseUnityPlugin
     {
-        public const string GUID = "com.github.mattymatty97.AsyncLoggers";
+        public const string GUID = "mattymatty.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
-        public const string VERSION = "1.2.7";
+        public const string VERSION = "1.2.8";
 
         internal static ManualLogSource Log;
 
@@ -94,7 +94,10 @@ namespace AsyncLoggers
         private void OnApplicationQuit()
         {
             Log.LogWarning($"Closing game!");
-            JobWrapper.SINGLETON.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
+            foreach (var jobWrapper in JobWrapper.INSTANCES.Values)
+            {
+                jobWrapper.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
+            }
             foreach (var logListener in BepInEx.Logging.Logger.Listeners)
             {
                 (logListener as AsyncLogListenerWrapper)?.Dispose();

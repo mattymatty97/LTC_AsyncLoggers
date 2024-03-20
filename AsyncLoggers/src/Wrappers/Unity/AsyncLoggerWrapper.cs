@@ -17,7 +17,7 @@ namespace AsyncLoggers.Wrappers.Unity
                 _asyncWrapper = new ThreadWrapper();
             else
             {
-                _asyncWrapper = JobWrapper.SINGLETON;
+                _asyncWrapper = new JobWrapper();
             }
             _baseLogger = baseLogger;
         }
