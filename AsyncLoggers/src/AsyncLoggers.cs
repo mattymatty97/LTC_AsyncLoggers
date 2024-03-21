@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Reflection;
+using AsyncLoggers.Dependency;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.BepInEx;
 using AsyncLoggers.Wrappers.Unity;
@@ -14,6 +15,7 @@ using UnityEngine;
 namespace AsyncLoggers
 {
     [BepInPlugin(GUID, NAME, VERSION)]
+    [BepInDependency("TeamBMX.LobbyCompatibility", BepInDependency.DependencyFlags.SoftDependency)]
     internal class AsyncLoggers : BaseUnityPlugin
     {
         public const string GUID = "mattymatty.AsyncLoggers";
@@ -28,6 +30,9 @@ namespace AsyncLoggers
             Log = Logger;
             try
             {
+                    if (LobbyCompatibilityChecker.Enabled)
+                        LobbyCompatibilityChecker.Init();
+                    
                     PluginConfig.Init();
                 
                     if (PluginConfig.Unity.Enabled.Value)

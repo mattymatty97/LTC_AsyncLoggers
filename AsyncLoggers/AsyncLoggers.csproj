@@ -44,6 +44,7 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="src\AsyncLoggers.cs" />
+        <Compile Include="src\Dependency\LobbyCompatibilityChecker.cs" />
         <Compile Include="src\DisruptorUnity3d\AltRingBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\ConcurrentCircularBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\RingBuffer.cs" />
@@ -57,12 +58,14 @@
     </ItemGroup>
     <ItemGroup>
         <Content Include="GameDirectory.targets"/>
+        <Content Include="GameDirectory.targets.example" />
         <Content Include="PostBuildEvents.targets"/>
     </ItemGroup>
     <ItemGroup>
         <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" />
         <PackageReference Include="HarmonyX" Version="2.5.5"/>
         <PackageReference Include="Mono.Cecil" Version="0.11.4"/>
+        <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.0.1" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>
     <Import Project="PostBuildEvents.targets"/>
