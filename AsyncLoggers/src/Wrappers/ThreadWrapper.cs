@@ -18,7 +18,7 @@ namespace AsyncLoggers.Wrappers
 
         internal ThreadWrapper()
         {
-            _taskRingBuffer = new ConcurrentCircularBuffer<IAsyncWrapper.LogCallback>(AsyncLoggers.PluginConfig.Scheduler.ThreadBufferSize.Value);
+            _taskRingBuffer = new ConcurrentCircularBuffer<IAsyncWrapper.LogCallback>(PluginConfig.Scheduler.ThreadBufferSize.Value);
             _semaphore = new SemaphoreSlim(0);
             _loggingThread = new Thread(LogWorker);
             _loggingThread.Start();
@@ -49,7 +49,7 @@ namespace AsyncLoggers.Wrappers
                     {
                         try
                         {
-                            AsyncLoggers.Log.LogError($"Exception while logging: {ex}");
+                            AsyncLoggerPreloader.Log.LogError($"Exception while logging: {ex}");
                         }
                         catch (Exception)
                         {
@@ -62,7 +62,7 @@ namespace AsyncLoggers.Wrappers
             {
                 try
                 {
-                    AsyncLoggers.Log.LogError($"Bad Exception while logging: {ex}");}
+                    AsyncLoggerPreloader.Log.LogError($"Bad Exception while logging: {ex}");}
                 catch (Exception)
                 {
                     Console.WriteLine($"Exception while logging: {ex}");

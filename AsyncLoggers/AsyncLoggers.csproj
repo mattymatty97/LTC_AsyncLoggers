@@ -43,11 +43,15 @@
         <Reference Include="System.Xml"/>
     </ItemGroup>
     <ItemGroup>
+        <Compile Include="src\AsyncLoggerPreloader.cs" />
         <Compile Include="src\AsyncLoggers.cs" />
         <Compile Include="src\Dependency\LobbyCompatibilityChecker.cs" />
         <Compile Include="src\DisruptorUnity3d\AltRingBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\ConcurrentCircularBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\RingBuffer.cs" />
+        <Compile Include="src\Patches\BepInExChailoaderPatch.cs" />
+        <Compile Include="src\Patches\UnityLoggerPatcher.cs" />
+        <Compile Include="src\PluginConfig.cs" />
         <Compile Include="src\Properties\AssemblyInfo.cs" />
         <Compile Include="src\Wrappers\AsyncWrapper.cs" />
         <Compile Include="src\Wrappers\ThreadWrapper.cs" />

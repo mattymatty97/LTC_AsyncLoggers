@@ -42,7 +42,7 @@
     </Target>
     <PropertyGroup>
         <!-- The mod directory to install our mod to. -->
-        <ModDirectory>$(GameDirectory)\BepInEx\plugins\0-$(AssemblyName)</ModDirectory>
+        <ModDirectory>$(ProfileDirectory)\BepInEx\patchers\0-$(AssemblyName)</ModDirectory>
         <!-- Where to create the temporary directory for creating the release zip files. -->
         <TempZipDir>$(OutputPath)ZipMeUp</TempZipDir>
         <!-- The internal structure of the zip file. -->

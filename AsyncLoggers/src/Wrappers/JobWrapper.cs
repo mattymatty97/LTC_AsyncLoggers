@@ -25,7 +25,7 @@ namespace AsyncLoggers.Wrappers
         {
             var _id = Interlocked.Add(ref _IDSeed, 1);
             INSTANCES[_id] = this;
-            _taskRingBuffer = new ConcurrentCircularBuffer<IAsyncWrapper.LogCallback>(AsyncLoggers.PluginConfig.Scheduler.JobBufferSize.Value);
+            _taskRingBuffer = new ConcurrentCircularBuffer<IAsyncWrapper.LogCallback>(PluginConfig.Scheduler.JobBufferSize.Value);
             DefaultCondition = ()=>_taskRingBuffer.Count > 0;
             _shouldRun = DefaultCondition;
             _loggingJobStruct = new LogJob(_id);
@@ -92,7 +92,7 @@ namespace AsyncLoggers.Wrappers
                     {
                         try
                         {
-                            AsyncLoggers.Log.LogError($"Exception while logging: {ex}");
+                            AsyncLoggerPreloader.Log.LogError($"Exception while logging: {ex}");
                         }
                         catch (Exception)
                         {
@@ -105,7 +105,7 @@ namespace AsyncLoggers.Wrappers
             {
                 try
                 {
-                    AsyncLoggers.Log.LogError($"Bad Exception while logging: {ex}");}
+                    AsyncLoggerPreloader.Log.LogError($"Bad Exception while logging: {ex}");}
                 catch (Exception)
                 {
                     Console.WriteLine($"Exception while logging: {ex}");

@@ -13,7 +13,7 @@ namespace AsyncLoggers.Wrappers.Unity
         {
             if (baseHandler is AsyncLogHandlerWrapper)
                 throw new ArgumentException("Cannot nest AsyncLoggers");
-            if (AsyncLoggers.PluginConfig.Unity.Scheduler.Value == AsyncLoggers.PluginConfig.AsyncType.Thread)
+            if (PluginConfig.Unity.Scheduler.Value == PluginConfig.AsyncType.Thread)
                 _asyncWrapper = new ThreadWrapper();
             else
             {

@@ -13,7 +13,7 @@ namespace AsyncLoggers.Wrappers.BepInEx
         {
             if (baseListener is AsyncLogListenerWrapper)
                 throw new ArgumentException("Cannot nest AsyncLoggers");
-            if (AsyncLoggers.PluginConfig.BepInEx.Scheduler.Value == AsyncLoggers.PluginConfig.AsyncType.Thread)
+            if (PluginConfig.BepInEx.Scheduler.Value == PluginConfig.AsyncType.Thread)
                 _threadWrapper = new ThreadWrapper();
             else
             {
@@ -24,8 +24,8 @@ namespace AsyncLoggers.Wrappers.BepInEx
 
         public void Dispose()
         {
-            var instant = AsyncLoggers.PluginConfig.Scheduler.ShutdownType.Value ==
-                          AsyncLoggers.PluginConfig.ShutdownType.Instant;
+            var instant = PluginConfig.Scheduler.ShutdownType.Value ==
+                          PluginConfig.ShutdownType.Instant;
             if (instant)
                 _baseListener.Dispose();
             else
