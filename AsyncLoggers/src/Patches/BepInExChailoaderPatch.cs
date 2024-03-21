@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Reflection.Emit;
 using AsyncLoggers.Wrappers.BepInEx;
 using AsyncLoggers.Wrappers.Unity;
 using BepInEx.Bootstrap;
@@ -71,7 +69,6 @@ namespace AsyncLoggers.Patches
 
             return codes;
         }*/
-
 
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Initialize))]

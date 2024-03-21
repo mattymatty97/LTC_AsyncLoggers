@@ -37,7 +37,7 @@ namespace AsyncLoggers.Patches
                        blocks = curr.blocks,
                     });
                     i++;
-                    AsyncLoggerPreloader.Log.LogDebug("Converted Unity Logger to Async!!");
+                    AsyncLoggerPreloader.Log.LogDebug("Forcing Unity Logger to Async!!");
                 }
                 
                 if (PluginConfig.Unity.Wrapper.Value == PluginConfig.UnityWrapperType.LogHandler && curr.opcode == OpCodes.Newobj && logHandlerConstructors.Contains(curr.operand))
@@ -47,7 +47,7 @@ namespace AsyncLoggers.Patches
                        blocks = curr.blocks,
                     });
                     i++;
-                    AsyncLoggerPreloader.Log.LogDebug("Converted Unity LogHandler to Async!!");
+                    AsyncLoggerPreloader.Log.LogDebug("Forcing Unity LogHandler to Async!!");
                 }
             }
             return codes;

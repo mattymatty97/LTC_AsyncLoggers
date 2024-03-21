@@ -1,11 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using AsyncLoggers.Patches;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
-using UnityEngine;
 using Mono.Cecil;
 
 namespace AsyncLoggers
@@ -28,7 +26,7 @@ namespace AsyncLoggers
             Harmony harmony = new Harmony(AsyncLoggers.GUID);
             harmony.PatchAll(typeof(UnityLoggerPatcher));
             harmony.PatchAll(typeof(BepInExChailoaderPatch));
-            Log.LogWarning($"{AsyncLoggers.NAME} Prepatcher Finieshed");
+            Log.LogWarning($"{AsyncLoggers.NAME} Prepatcher Finished");
         }
         
         
@@ -38,7 +36,7 @@ namespace AsyncLoggers
             {
                 jobWrapper.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
             }
-            foreach (var logListener in BepInEx.Logging.Logger.Listeners)
+            foreach (var logListener in Logger.Listeners)
             {
                 (logListener as AsyncLogListenerWrapper)?.Dispose();
             }

@@ -11,6 +11,7 @@
         <ThunderStoreItems Include="..\manifest.json"/>
         <ThunderStoreItems Include="..\README.md"/>
         <ThunderStoreItems Include="..\CHANGELOG.md"/>
+        <ThunderStoreItems Include="..\AsyncLoggers.DLL.in.patchers"/>
     </ItemGroup>
     <!-- Defining the reference files that have to be publicized. -->
     <ItemGroup>
@@ -46,12 +47,12 @@
         <!-- Where to create the temporary directory for creating the release zip files. -->
         <TempZipDir>$(OutputPath)ZipMeUp</TempZipDir>
         <!-- The internal structure of the zip file. -->
-        <ZipStructure>$(AssemblyName)</ZipStructure>
+        <ZipStructure>BepInEx\patchers</ZipStructure>
     </PropertyGroup>
 
     <!-- Copy newly built files to the game directory. -->
     <Target Name="CopyToGameFolder" AfterTargets="Build">
-        <Message Importance="high" Text="Copying files to game directory."/>
+        <Message Importance="high" Text="Copying files to game directory. ($(ModDirectory))"/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDirectory)"/>
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModDirectory)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(ModDirectory)\%(Assets.RelativeDir)"/>
