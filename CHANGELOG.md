@@ -1,3 +1,8 @@
+# v1.3.0
+- make the mod a PrePatcher ( meaning will load before everybody else )
+- allow for multiple IJobs ( if somebody wants to have BepInEx use Jobs too )
+- add LobbyCompatibility softDependency
+
 # v1.2.7
 - use non-unsigned values to calculate the wrapPoint ( make the patch actually work )
 
