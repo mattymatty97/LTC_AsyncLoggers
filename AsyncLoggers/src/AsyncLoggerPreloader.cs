@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using AsyncLoggers.Patches;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.BepInEx;
@@ -14,6 +16,9 @@ namespace AsyncLoggers
         
         public static IEnumerable<string> TargetDLLs { get; } = new string[0];
 
+        internal static int startTime;
+        internal static readonly ThreadLocal<object> logTimestamp = new ThreadLocal<object>();
+
         public static void Patch(AssemblyDefinition assembly)
         {
         }
@@ -22,13 +27,32 @@ namespace AsyncLoggers
         public static void Finish()
         {
             PluginConfig.Init();
-            Log.LogWarning($"{AsyncLoggers.NAME} Prepatcher Started");
+            Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Started");
+            startTime = Environment.TickCount & Int32.MaxValue;
+            if (PluginConfig.Timestamps.Enabled.Value)
+                Log.LogWarning($"{AsyncLoggers.NAME} Timestamps start at {DateTime.Now.ToString("dddd, dd MMMM yyyy HH:mm:ss.fffffff")}");
+            if (PluginConfig.Timestamps.UseTicks.Value)
+                GetCurrTimestamp = () =>
+                {
+                    if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
+                        return logTimestamp.Value;
+                    return (Environment.TickCount & Int32.MaxValue) - startTime;
+                };
+            else
+                GetCurrTimestamp = () =>
+                {
+                    if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
+                        return logTimestamp.Value;
+                    return DateTime.Now.ToString("HH:mm:ss.fffffff");
+                };
+            
             Harmony harmony = new Harmony(AsyncLoggers.GUID);
             harmony.PatchAll(typeof(UnityLoggerPatcher));
             harmony.PatchAll(typeof(BepInExChailoaderPatch));
-            Log.LogWarning($"{AsyncLoggers.NAME} Prepatcher Finished");
+            Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Finished");
         }
-        
+
+        internal static Func<object> GetCurrTimestamp;
         
         internal static void OnApplicationQuit()
         {

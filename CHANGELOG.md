@@ -1,3 +1,6 @@
+# v1.4.0
+- add Timestamps to BepInEx logs
+
 # v1.3.0
 - make the mod a PrePatcher ( meaning will load before everybody else )
 - allow for multiple IJobs ( if somebody wants to have BepInEx use Jobs too )

@@ -40,11 +40,11 @@ namespace AsyncLoggers.Patches
                     AsyncLoggerPreloader.Log.LogDebug("Forcing Unity Logger to Async!!");
                 }
                 
-                if (PluginConfig.Unity.Wrapper.Value == PluginConfig.UnityWrapperType.LogHandler && curr.opcode == OpCodes.Newobj && logHandlerConstructors.Contains(curr.operand))
+                if (curr.opcode == OpCodes.Newobj && PluginConfig.Unity.Wrapper.Value == PluginConfig.UnityWrapperType.LogHandler && logHandlerConstructors.Contains(curr.operand))
                 {
                     codes.Insert(i + 1, new CodeInstruction(OpCodes.Newobj, asyncLogHandlerConstructors[0])
                     {
-                       blocks = curr.blocks,
+                        blocks = curr.blocks,
                     });
                     i++;
                     AsyncLoggerPreloader.Log.LogDebug("Forcing Unity LogHandler to Async!!");

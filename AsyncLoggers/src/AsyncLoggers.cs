@@ -2,7 +2,6 @@
 using System.Diagnostics.CodeAnalysis;
 using AsyncLoggers.Dependency;
 using BepInEx;
-using BepInEx.Logging;
 using UnityEngine;
 
 namespace AsyncLoggers
@@ -13,9 +12,7 @@ namespace AsyncLoggers
     {
         public const string GUID = "mattymatty.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
-        public const string VERSION = "1.2.8";
-
-        internal static ManualLogSource Log = AsyncLoggerPreloader.Log;
+        public const string VERSION = "1.4.0";
 
         [SuppressMessage("ReSharper", "ConvertIfStatementToSwitchStatement")]
         private void Awake()
@@ -29,7 +26,7 @@ namespace AsyncLoggers
             }
             catch (Exception ex)
             {
-                Log.LogError("Exception while initializing: \n" + ex);
+                AsyncLoggerPreloader.Log.LogError("Exception while initializing: \n" + ex);
             }
         }
 

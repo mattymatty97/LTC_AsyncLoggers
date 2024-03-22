@@ -24,12 +24,25 @@ namespace AsyncLoggers.Wrappers.Unity
 
         public void LogFormat(LogType logType, Object context, string format, params object[] args)
         {
-            _asyncWrapper.Schedule(()=>_baseHandler.LogFormat(logType,context,format,args));
+            object timestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = timestamp;
+                _baseHandler.LogFormat(logType, context, format, args);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
         
         public void LogException(Exception exception, Object context)
         {
-            _asyncWrapper.Schedule(()=>_baseHandler.LogException(exception,context));
+            
+            object timestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(() =>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = timestamp;
+                _baseHandler.LogException(exception, context);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
     }

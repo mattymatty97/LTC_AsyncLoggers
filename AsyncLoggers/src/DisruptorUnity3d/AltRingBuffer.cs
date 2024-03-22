@@ -1,6 +1,4 @@
-﻿using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using System.Threading;
+﻿using System.Threading;
 
 namespace DisruptorUnity3d
 {
@@ -37,6 +35,8 @@ namespace DisruptorUnity3d
             if (_producerCursor <= next)
             {
                 obj = default(T);
+                Interlocked.Exchange(ref _producerCursor, _producerCursor & _modMask);
+                Interlocked.Exchange(ref _consumerCursor, _consumerCursor & _modMask);
                 return false;
             }
             obj = this[next];

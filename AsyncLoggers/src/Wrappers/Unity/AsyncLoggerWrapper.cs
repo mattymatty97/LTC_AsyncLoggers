@@ -24,12 +24,24 @@ namespace AsyncLoggers.Wrappers.Unity
         
         public void LogFormat(LogType logType, Object context, string format, params object[] args)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.LogFormat(logType, context, format, args));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.LogFormat(logType, context, format, args);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void LogException(Exception exception, Object context)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.LogException(exception, context));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.LogException(exception, context);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public bool IsLogTypeAllowed(LogType logType)
@@ -39,67 +51,145 @@ namespace AsyncLoggers.Wrappers.Unity
 
         public void Log(LogType logType, object message)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.Log(logType, message));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.Log(logType, message);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void Log(LogType logType, object message, Object context)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.Log(logType, message, context));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.Log(logType, message, context);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void Log(LogType logType, string tag, object message)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.Log(logType, tag, message));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.Log(logType, tag, message);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void Log(LogType logType, string tag, object message, Object context)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.Log(logType, tag, message, context));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.Log(logType, tag, message, context);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void Log(object message)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.Log(message));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.Log(message);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void Log(string tag, object message)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.Log(tag, message));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.Log(tag, message);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void Log(string tag, object message, Object context)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.Log(tag, message, context));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.Log(tag, message, context);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void LogWarning(string tag, object message)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.LogWarning(tag, message));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.LogWarning(tag, message);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void LogWarning(string tag, object message, Object context)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.LogWarning(tag, message, context));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.LogWarning(tag, message, context);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void LogError(string tag, object message)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.LogError(tag, message));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.LogError(tag, message);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void LogError(string tag, object message, Object context)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.LogError(tag, message, context));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.LogError(tag, message, context);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void LogFormat(LogType logType, string format, params object[] args)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.LogFormat(logType, format, args));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.LogFormat(logType, format, args);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public void LogException(Exception exception)
         {
-            _asyncWrapper.Schedule(()=>_baseLogger.LogException(exception));
+            object currTimestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _asyncWrapper.Schedule(() =>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = currTimestamp;
+                _baseLogger.LogException(exception);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
 
         public ILogHandler logHandler

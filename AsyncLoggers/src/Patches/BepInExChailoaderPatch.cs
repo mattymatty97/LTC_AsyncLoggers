@@ -94,7 +94,8 @@ namespace AsyncLoggers.Patches
                 {
                     case PluginConfig.UnityWrapperType.LogHandler:
                         Debug.s_Logger.logHandler = new AsyncLogHandlerWrapper(Debug.s_Logger.logHandler);
-                        Debug.s_DefaultLogger.logHandler = new AsyncLogHandlerWrapper(Debug.s_DefaultLogger.logHandler);
+                        Debug.s_DefaultLogger.logHandler =
+                            new AsyncLogHandlerWrapper(Debug.s_DefaultLogger.logHandler);
                         break;
                     case PluginConfig.UnityWrapperType.Logger:
                     {

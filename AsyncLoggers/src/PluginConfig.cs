@@ -12,13 +12,17 @@ namespace AsyncLoggers
         {
             var config = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME + ".cfg"), true);
             //Initialize Configs
-            
+            //Timestamps
+            Timestamps.Enabled = config.Bind("Timestamps","enabled",true
+                ,"add numeric timestamps to the logs");
+            Timestamps.UseTicks = config.Bind("Timestamps","use_ticks",false
+                ,"show the timestamps as ticks instead of formatted time");
             //Scheduler
             Scheduler.JobBufferSize = config.Bind("Scheduler","job_buffer_size",1024U
                 ,"maximum size of the log queue for the Job Scheduler ( only one Job scheduler exists! )");
             Scheduler.ThreadBufferSize = config.Bind("Scheduler","thread_buffer_size",500U
                 ,"maximum size of the log queue for the Threaded Scheduler ( each logger has a separate one )");
-            Scheduler.ShutdownType = config.Bind("Scheduler","shutdown_type",ShutdownType.Instant
+            Scheduler.ShutdownType = config.Bind("Scheduler","shutdown_type",ShutdownType.Await
                 ,"close immediately or wait for all logs to be written ( Instant/Await ) ");
             //Unity
             Unity.Enabled = config.Bind("Unity","enabled",true
@@ -53,6 +57,12 @@ namespace AsyncLoggers
             public static ConfigEntry<uint> JobBufferSize;
             public static ConfigEntry<uint> ThreadBufferSize;
             public static ConfigEntry<ShutdownType> ShutdownType;
+        }
+        
+        public static class Timestamps
+        {
+            public static ConfigEntry<bool> Enabled;
+            public static ConfigEntry<bool> UseTicks;
         }
 
         public static class Unity

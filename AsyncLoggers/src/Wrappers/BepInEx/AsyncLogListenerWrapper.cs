@@ -35,7 +35,13 @@ namespace AsyncLoggers.Wrappers.BepInEx
 
         public void LogEvent(object sender, LogEventArgs eventArgs)
         {
-            _threadWrapper.Schedule(()=>_baseListener.LogEvent(sender,eventArgs));
+            object timestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+            _threadWrapper.Schedule(()=>
+            {
+                AsyncLoggerPreloader.logTimestamp.Value = timestamp;
+                _baseListener.LogEvent(sender, PluginConfig.Timestamps.Enabled.Value ? new TimestampedLogEventArgs(eventArgs) : eventArgs);
+                AsyncLoggerPreloader.logTimestamp.Value = null;
+            });
         }
     }
 }
