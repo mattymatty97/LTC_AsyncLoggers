@@ -39,7 +39,7 @@ namespace AsyncLoggers.Wrappers.BepInEx
             _threadWrapper.Schedule(()=>
             {
                 AsyncLoggerPreloader.logTimestamp.Value = timestamp;
-                _baseListener.LogEvent(sender, PluginConfig.Timestamps.Enabled.Value ? new TimestampedLogEventArgs(eventArgs) : eventArgs);
+                _baseListener.LogEvent(sender, eventArgs);
                 AsyncLoggerPreloader.logTimestamp.Value = null;
             });
         }

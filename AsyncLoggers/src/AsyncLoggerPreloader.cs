@@ -47,6 +47,7 @@ namespace AsyncLoggers
                 };
             
             Harmony harmony = new Harmony(AsyncLoggers.GUID);
+            harmony.PatchAll(typeof(BepInExLogEventArgsPatch));
             harmony.PatchAll(typeof(UnityLoggerPatcher));
             harmony.PatchAll(typeof(BepInExChailoaderPatch));
             Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Finished");

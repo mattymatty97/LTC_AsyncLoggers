@@ -50,11 +50,11 @@
         <Compile Include="src\DisruptorUnity3d\ConcurrentCircularBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\RingBuffer.cs" />
         <Compile Include="src\Patches\BepInExChailoaderPatch.cs" />
+        <Compile Include="src\Patches\BepInExLogEventArgsPatch.cs" />
         <Compile Include="src\Patches\UnityLoggerPatcher.cs" />
         <Compile Include="src\PluginConfig.cs" />
         <Compile Include="src\Properties\AssemblyInfo.cs" />
         <Compile Include="src\Wrappers\AsyncWrapper.cs" />
-        <Compile Include="src\Wrappers\BepInEx\TimestampedLogEventArgs.cs" />
         <Compile Include="src\Wrappers\ThreadWrapper.cs" />
         <Compile Include="src\Wrappers\BepInEx\AsyncLogListenerWrapper.cs" />
         <Compile Include="src\Wrappers\JobWrapper.cs" />
