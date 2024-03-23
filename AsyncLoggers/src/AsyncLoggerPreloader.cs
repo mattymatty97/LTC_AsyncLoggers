@@ -55,7 +55,7 @@ namespace AsyncLoggers
                 {
                     var curr = DateTime.Now.ToString("HH:mm:ss.fffffff");
                     if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
-                        return $"{logTimestamp.Value} -> {curr}";
+                        return logTimestamp.Value;
                     return curr;
                 };
         }
@@ -78,9 +78,9 @@ namespace AsyncLoggers
             {
                 jobWrapper.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
             }
-            foreach (var logListener in Logger.Listeners)
+            foreach (var threadWrapper in ThreadWrapper._wrappers)
             {
-                (logListener as AsyncLogListenerWrapper)?.Dispose();
+                threadWrapper?.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
             }
         }
     }

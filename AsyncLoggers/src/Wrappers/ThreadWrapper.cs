@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using DisruptorUnity3d;
@@ -8,6 +9,7 @@ namespace AsyncLoggers.Wrappers
 {
     public class ThreadWrapper: IAsyncWrapper
     {
+        internal static readonly HashSet<ThreadWrapper> _wrappers = new HashSet<ThreadWrapper>();
         private delegate bool RunCondition();
 
         private readonly Thread _loggingThread;
@@ -22,6 +24,7 @@ namespace AsyncLoggers.Wrappers
             _semaphore = new SemaphoreSlim(0);
             _loggingThread = new Thread(LogWorker);
             _loggingThread.Start();
+            _wrappers.Add(this);
         }
         
         [HideInCallstack]
