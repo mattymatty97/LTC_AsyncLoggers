@@ -50,7 +50,7 @@ namespace AsyncLoggers
                 {
                     if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
                         return logTimestamp.Value;
-                    return (Environment.TickCount & Int32.MaxValue) - startTime;
+                    return $"{(Environment.TickCount & Int32.MaxValue) - startTime:0000000000000000}";
                 };
             else
                 GetLogTimestamp = () =>
