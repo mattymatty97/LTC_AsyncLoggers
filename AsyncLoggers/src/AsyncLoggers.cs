@@ -19,10 +19,10 @@ namespace AsyncLoggers
         {
             try
             {
-                    if (LobbyCompatibilityChecker.Enabled)
-                        LobbyCompatibilityChecker.Init();
+                if (LobbyCompatibilityProxy.Enabled)
+                    LobbyCompatibilityProxy.Init();
                     
-                    Application.quitting += AsyncLoggerPreloader.OnApplicationQuit;
+                Application.quitting += AsyncLoggerPreloader.OnApplicationQuit;
             }
             catch (Exception ex)
             {

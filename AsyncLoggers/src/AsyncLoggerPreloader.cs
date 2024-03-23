@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using AsyncLoggers.Cecil;
 using AsyncLoggers.Patches;
 using AsyncLoggers.Wrappers;
-using AsyncLoggers.Wrappers.BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using Mono.Cecil;
@@ -15,12 +16,13 @@ namespace AsyncLoggers
     public static class AsyncLoggerPreloader
     {
         internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggerPreloader));
-        
-        public static IEnumerable<string> TargetDLLs { get; } = new string[]{"UnityEngine.CoreModule.dll"};
+        internal static Harmony _harmony;
 
         internal static int startTime;
         internal static readonly ThreadLocal<object> logTimestamp = new ThreadLocal<object>();
-
+        internal static readonly ThreadLocal<object> logStackTrace = new ThreadLocal<object>();
+        
+        public static IEnumerable<string> TargetDLLs { get; } = new string[]{"UnityEngine.CoreModule.dll"};
         public static void Patch(AssemblyDefinition assembly)
         {
             if (assembly.Name.Name == "UnityEngine.CoreModule")
@@ -44,33 +46,40 @@ namespace AsyncLoggers
             if (PluginConfig.Timestamps.Enabled.Value)
                 Log.LogWarning($"{AsyncLoggers.NAME} Timestamps start at {DateTime.Now.ToString("dddd, dd MMMM yyyy HH:mm:ss.fffffff")}");
             if (PluginConfig.Timestamps.UseTicks.Value)
-                GetCurrTimestamp = () =>
+                GetLogTimestamp = () =>
                 {
                     if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
                         return logTimestamp.Value;
                     return (Environment.TickCount & Int32.MaxValue) - startTime;
                 };
             else
-                GetCurrTimestamp = () =>
+                GetLogTimestamp = () =>
                 {
-                    var curr = DateTime.Now.ToString("HH:mm:ss.fffffff");
                     if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
                         return logTimestamp.Value;
-                    return curr;
+                    return DateTime.Now.ToString("HH:mm:ss.fffffff");
                 };
         }
         
         // Cannot be renamed, method name is important
         public static void Finish()
         {
-            Harmony harmony = new Harmony(AsyncLoggers.GUID);
-            harmony.PatchAll(typeof(BepInExLogEventArgsPatch));
-            //harmony.PatchAll(typeof(UnityLoggerPatcher));
-            harmony.PatchAll(typeof(BepInExChainloaderPatch));
+            _harmony = new Harmony(AsyncLoggers.GUID);
+            _harmony.PatchAll(typeof(BepInExLogEventArgsPatch));
+            _harmony.PatchAll(typeof(BepInExChainloaderPatch));
             Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Finished");
         }
 
-        internal static Func<object> GetCurrTimestamp;
+        internal static Func<object> GetLogTimestamp;
+
+        internal static object GetLogStackTrace(int skippedCalls = 1, bool create= true)
+        {
+            if (logStackTrace.IsValueCreated && logStackTrace.Value != null)
+                return logStackTrace.Value;
+            if (create)
+                return new StackTrace(skippedCalls).ToString();
+            return null;
+        }
         
         internal static void OnApplicationQuit()
         {

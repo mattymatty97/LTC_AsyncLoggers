@@ -72,14 +72,33 @@ namespace AsyncLoggers.Wrappers
                 }
             }
         }
-
+        
         public void Schedule(IAsyncWrapper.LogCallback callback)
         {
             if (_shouldRun != DefaultCondition) 
                 return;
             
-            _taskRingBuffer.Enqueue(callback);
+            var timestamp = AsyncLoggerPreloader.GetLogTimestamp();
+            var stacktrace = AsyncLoggerPreloader.GetLogStackTrace(3);
+
+            _taskRingBuffer.Enqueue(CallbackWrapper);
             _semaphore.Release();
+            return;
+
+            void CallbackWrapper()
+            {
+                try
+                {
+                    AsyncLoggerPreloader.logTimestamp.Value = timestamp;
+                    AsyncLoggerPreloader.logStackTrace.Value = stacktrace;
+                    callback();
+                }
+                finally
+                {
+                    AsyncLoggerPreloader.logTimestamp.Value = null;
+                    AsyncLoggerPreloader.logStackTrace.Value = null;
+                }
+            }
         }
 
         public void Stop(bool immediate=false)

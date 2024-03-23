@@ -18,16 +18,17 @@ namespace AsyncLoggers.Patches
         {
             AsyncLoggerPreloader.Log.LogInfo(
                 "using logMessageReceivedThreaded instead of logMessageReceived for UnityLogSource!!");
-            Application.LogCallback handler = UnityLogSource.OnUnityLogMessageReceived;
+            Application.LogCallback oldHandler = UnityLogSource.OnUnityLogMessageReceived;
+            Application.LogCallback newHandler = UnityLogMessageReceivedWrapper;
             EventInfo eventInfo =
                 typeof(Application).GetEvent("logMessageReceived", BindingFlags.Static | BindingFlags.Public);
             if (eventInfo != null)
-                eventInfo.RemoveEventHandler(null, handler);
+                eventInfo.RemoveEventHandler(null, oldHandler);
 
             eventInfo = typeof(Application).GetEvent("logMessageReceivedThreaded",
                 BindingFlags.Static | BindingFlags.Public);
             if (eventInfo != null)
-                eventInfo.AddEventHandler(null, handler);
+                eventInfo.AddEventHandler(null, newHandler);
             
             if (PluginConfig.BepInEx.Enabled.Value)
             {
@@ -53,6 +54,39 @@ namespace AsyncLoggers.Patches
                     collection.Remove(logger);
                     collection.Add(new AsyncLogListenerWrapper(logger));
                 }
+            }
+
+            void UnityLogMessageReceivedWrapper(string message, string stackTrace, LogType type)
+            {
+                if (type == LogType.Exception)
+                {
+                    var customStack = AsyncLoggerPreloader.GetLogStackTrace(2, false);
+                    if (customStack != null)
+                    {
+                        var sections = stackTrace.Trim().Split('\n').ToList();
+                        var isJob = sections[sections.Count - 1].StartsWith("Unity.Jobs.JobStruct");
+                        var isThread = sections[sections.Count - 1].StartsWith("System.Threading.ThreadHelper");
+                        if (isJob || isThread)
+                        {
+                            var to_remove = 1;
+                            for (var i = sections.Count - 2; i >= 0; i--)
+                            {
+                                var curr = sections[i];
+                                if (!curr.StartsWith("AsyncLoggers.Wrappers"))
+                                    break;
+                                to_remove++;
+                            }
+
+                            if (to_remove > 1)
+                            {
+                                if (to_remove < sections.Count - 2)
+                                    sections.RemoveRange(sections.Count - to_remove, to_remove);
+                                stackTrace = string.Join("\n", sections) + "\n" + ((string)customStack).Replace("  at ", "") + "\n";
+                            }
+                        }
+                    }
+                }
+                UnityLogSource.OnUnityLogMessageReceived(message, stackTrace, type);
             }
         }
     }

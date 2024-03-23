@@ -4,7 +4,7 @@ using LobbyCompatibility.Features;
 
 namespace AsyncLoggers.Dependency
 {
-    public static class LobbyCompatibilityChecker
+    public static class LobbyCompatibilityProxy
     {
         public static bool Enabled { get { return BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey("BMX.LobbyCompatibility"); } }
         

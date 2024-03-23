@@ -36,11 +36,29 @@ namespace AsyncLoggers.Wrappers
             if (_shouldRun != DefaultCondition) 
                 return;
             
-            _taskRingBuffer.Enqueue(callback);
+            var timestamp = AsyncLoggerPreloader.GetLogTimestamp();
+            var stacktrace = AsyncLoggerPreloader.GetLogStackTrace(3);
+
+            _taskRingBuffer.Enqueue(CallbackWrapper);
 
             if (_loggingJob == null || _loggingJob.Value.IsCompleted )
             {
                 _loggingJob = _loggingJobStruct.Schedule();
+            }
+            
+            void CallbackWrapper()
+            {
+                try
+                {
+                    AsyncLoggerPreloader.logTimestamp.Value = timestamp;
+                    AsyncLoggerPreloader.logStackTrace.Value = stacktrace;
+                    callback();
+                }
+                finally
+                {
+                    AsyncLoggerPreloader.logTimestamp.Value = null;
+                    AsyncLoggerPreloader.logStackTrace.Value = null;
+                }
             }
         }
 

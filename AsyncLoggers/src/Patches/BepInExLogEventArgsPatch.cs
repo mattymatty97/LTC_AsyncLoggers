@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using BepInEx.Logging;
+﻿using BepInEx.Logging;
 using HarmonyLib;
 
 namespace AsyncLoggers.Patches
@@ -13,7 +12,7 @@ namespace AsyncLoggers.Patches
         {
             if (PluginConfig.Timestamps.Enabled.Value)
             {
-                var timestamp = AsyncLoggerPreloader.GetCurrTimestamp();
+                var timestamp = AsyncLoggerPreloader.GetLogTimestamp();
                 __result = $"[{timestamp}] {__result}";
             }
         }
