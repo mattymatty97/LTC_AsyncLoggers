@@ -45,11 +45,14 @@
     <ItemGroup>
         <Compile Include="src\AsyncLoggerPreloader.cs" />
         <Compile Include="src\AsyncLoggers.cs" />
+        <Compile Include="src\Cecil\BepInExChainloaderCecilPatch.cs" />
+        <Compile Include="src\Cecil\UnityLogsCecilPatch.cs" />
+        <Compile Include="src\Cecil\WrapperWrapper.cs" />
         <Compile Include="src\Dependency\LobbyCompatibilityChecker.cs" />
         <Compile Include="src\DisruptorUnity3d\AltRingBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\ConcurrentCircularBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\RingBuffer.cs" />
-        <Compile Include="src\Patches\BepInExChailoaderPatch.cs" />
+        <Compile Include="src\Patches\BepInExChainloaderPatch.cs" />
         <Compile Include="src\Patches\BepInExLogEventArgsPatch.cs" />
         <Compile Include="src\Patches\UnityLoggerPatcher.cs" />
         <Compile Include="src\PluginConfig.cs" />

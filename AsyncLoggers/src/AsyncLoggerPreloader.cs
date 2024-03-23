@@ -1,30 +1,42 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using AsyncLoggers.Cecil;
 using AsyncLoggers.Patches;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using Mono.Cecil;
+using Logger = BepInEx.Logging.Logger;
 
 namespace AsyncLoggers
 {
     public static class AsyncLoggerPreloader
     {
-        internal static ManualLogSource Log { get; } = BepInEx.Logging.Logger.CreateLogSource(nameof(AsyncLoggerPreloader));
+        internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggerPreloader));
         
-        public static IEnumerable<string> TargetDLLs { get; } = new string[0];
+        public static IEnumerable<string> TargetDLLs { get; } = new string[]{"UnityEngine.CoreModule.dll"};
 
         internal static int startTime;
         internal static readonly ThreadLocal<object> logTimestamp = new ThreadLocal<object>();
 
         public static void Patch(AssemblyDefinition assembly)
         {
+            if (assembly.Name.Name == "UnityEngine.CoreModule")
+            {
+                foreach (TypeDefinition type in assembly.MainModule.Types)
+                {
+                    if (type.FullName == "UnityEngine.Debug")
+                    {
+                        UnityLogsCecilPatch.PatchUnityLogs(assembly, type);
+                    }
+                }
+            }
         }
-        
+
         // Cannot be renamed, method name is important
-        public static void Finish()
+        public static void Initialize()
         {
             PluginConfig.Init();
             Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Started");
@@ -41,15 +53,20 @@ namespace AsyncLoggers
             else
                 GetCurrTimestamp = () =>
                 {
+                    var curr = DateTime.Now.ToString("HH:mm:ss.fffffff");
                     if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
-                        return logTimestamp.Value;
-                    return DateTime.Now.ToString("HH:mm:ss.fffffff");
+                        return $"{logTimestamp.Value} -> {curr}";
+                    return curr;
                 };
-            
+        }
+        
+        // Cannot be renamed, method name is important
+        public static void Finish()
+        {
             Harmony harmony = new Harmony(AsyncLoggers.GUID);
             harmony.PatchAll(typeof(BepInExLogEventArgsPatch));
-            harmony.PatchAll(typeof(UnityLoggerPatcher));
-            harmony.PatchAll(typeof(BepInExChailoaderPatch));
+            //harmony.PatchAll(typeof(UnityLoggerPatcher));
+            harmony.PatchAll(typeof(BepInExChainloaderPatch));
             Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Finished");
         }
 
