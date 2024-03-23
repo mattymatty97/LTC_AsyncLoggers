@@ -1,5 +1,6 @@
 # v1.4.0
 - add Timestamps to BepInEx logs
+- removed AsyncLogger from exception stackTraces (BepInEx only)
 
 # v1.3.0
 - make the mod a PrePatcher ( meaning will load before everybody else )

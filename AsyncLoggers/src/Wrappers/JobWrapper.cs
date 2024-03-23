@@ -37,7 +37,7 @@ namespace AsyncLoggers.Wrappers
                 return;
             
             var timestamp = AsyncLoggerPreloader.GetLogTimestamp();
-            var stacktrace = AsyncLoggerPreloader.GetLogStackTrace(3);
+            var stacktrace = AsyncLoggerPreloader.GetLogStackTrace(true,3);
 
             _taskRingBuffer.Enqueue(CallbackWrapper);
 

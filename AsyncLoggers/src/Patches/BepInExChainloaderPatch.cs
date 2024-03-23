@@ -60,7 +60,7 @@ namespace AsyncLoggers.Patches
             {
                 if (type == LogType.Exception)
                 {
-                    var customStack = AsyncLoggerPreloader.GetLogStackTrace(2, false);
+                    var customStack = AsyncLoggerPreloader.GetLogStackTrace();
                     if (customStack != null)
                     {
                         var sections = stackTrace.Trim().Split('\n').ToList();

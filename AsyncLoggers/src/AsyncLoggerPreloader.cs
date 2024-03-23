@@ -72,7 +72,7 @@ namespace AsyncLoggers
 
         internal static Func<object> GetLogTimestamp;
 
-        internal static object GetLogStackTrace(int skippedCalls = 1, bool create= true)
+        internal static object GetLogStackTrace(bool create= false, int skippedCalls = 1)
         {
             if (logStackTrace.IsValueCreated && logStackTrace.Value != null)
                 return logStackTrace.Value;
