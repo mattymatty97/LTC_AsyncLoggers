@@ -15,8 +15,8 @@ namespace AsyncLoggers
             //Timestamps
             Timestamps.Enabled = config.Bind("Timestamps","enabled",true
                 ,"add numeric timestamps to the logs");
-            Timestamps.UseTicks = config.Bind("Timestamps","use_ticks",false
-                ,"show the timestamps as ticks instead of formatted time");
+            Timestamps.Type = config.Bind("Timestamps","type",TimestampType.DateTime
+                ,"what kind of timestamps to use");
             //Scheduler
             Scheduler.JobBufferSize = config.Bind("Scheduler","job_buffer_size",1024U
                 ,"maximum size of the log queue for the Job Scheduler ( only one Job scheduler exists! )");
@@ -62,7 +62,7 @@ namespace AsyncLoggers
         public static class Timestamps
         {
             public static ConfigEntry<bool> Enabled;
-            public static ConfigEntry<bool> UseTicks;
+            public static ConfigEntry<TimestampType> Type;
         }
 
         public static class Unity
@@ -97,6 +97,13 @@ namespace AsyncLoggers
         {
             Instant,
             Await
+        }
+        
+        public enum TimestampType
+        {
+            DateTime,
+            TickCount,
+            Counter
         }
     }
 }

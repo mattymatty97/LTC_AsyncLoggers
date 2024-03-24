@@ -12,7 +12,7 @@ namespace AsyncLoggers
     {
         public const string GUID = "mattymatty.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
-        public const string VERSION = "1.4.0";
+        public const string VERSION = "1.4.1";
 
         [SuppressMessage("ReSharper", "ConvertIfStatementToSwitchStatement")]
         private void Awake()

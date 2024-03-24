@@ -21,6 +21,7 @@ namespace AsyncLoggers
         internal static int startTime;
         internal static readonly ThreadLocal<object> logTimestamp = new ThreadLocal<object>();
         internal static readonly ThreadLocal<object> logStackTrace = new ThreadLocal<object>();
+        internal static long logCounter = 0L;
         
         public static IEnumerable<string> TargetDLLs { get; } = new string[]{"UnityEngine.CoreModule.dll"};
         public static void Patch(AssemblyDefinition assembly)
@@ -45,20 +46,37 @@ namespace AsyncLoggers
             startTime = Environment.TickCount & Int32.MaxValue;
             if (PluginConfig.Timestamps.Enabled.Value)
                 Log.LogWarning($"{AsyncLoggers.NAME} Timestamps start at {DateTime.Now.ToString("dddd, dd MMMM yyyy HH:mm:ss.fffffff")}");
-            if (PluginConfig.Timestamps.UseTicks.Value)
-                GetLogTimestamp = () =>
-                {
-                    if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
-                        return logTimestamp.Value;
-                    return $"{(Environment.TickCount & Int32.MaxValue) - startTime:0000000000000000}";
-                };
-            else
-                GetLogTimestamp = () =>
-                {
-                    if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
-                        return logTimestamp.Value;
-                    return DateTime.Now.ToString("HH:mm:ss.fffffff");
-                };
+            switch (PluginConfig.Timestamps.Type.Value)
+            {
+                case PluginConfig.TimestampType.DateTime:
+                    GetLogTimestamp = () =>
+                    {
+                        if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
+                            return logTimestamp.Value;
+                        return DateTime.Now.ToString("HH:mm:ss.fffffff");
+                    };
+                    break;
+                case PluginConfig.TimestampType.TickCount:
+                    GetLogTimestamp = () =>
+                    {
+                        if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
+                            return logTimestamp.Value;
+                        var timestamp = $"{(Environment.TickCount & Int32.MaxValue) - startTime:0000000000000000}";
+                        return timestamp.Substring(timestamp.Length - 16);
+                    };
+                    break;
+                case PluginConfig.TimestampType.Counter:
+                    GetLogTimestamp = () =>
+                    {
+                        if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
+                            return logTimestamp.Value;
+                        var timestamp = $"{Interlocked.Increment(ref logCounter):0000000000000000}";
+                        return timestamp.Substring(timestamp.Length - 16);
+                    };
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException($"{PluginConfig.Timestamps.Type.Value} is not a valid TimestampType");
+            }
         }
         
         // Cannot be renamed, method name is important

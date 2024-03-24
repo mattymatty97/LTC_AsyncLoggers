@@ -1,3 +1,7 @@
+# v1.4.1
+- add incremental counter as TimeStamp option
+- WIP
+
 # v1.4.0
 - add Timestamps to BepInEx logs
 - removed AsyncLogger from exception stackTraces (BepInEx only)
