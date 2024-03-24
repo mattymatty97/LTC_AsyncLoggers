@@ -45,6 +45,7 @@
     <ItemGroup>
         <Compile Include="src\AsyncLoggerPreloader.cs" />
         <Compile Include="src\AsyncLoggers.cs" />
+        <Compile Include="src\BepInExListeners\SqliteListener.cs" />
         <Compile Include="src\Cecil\BepInExChainloaderCecilPatch.cs" />
         <Compile Include="src\Cecil\UnityLogsCecilPatch.cs" />
         <Compile Include="src\Cecil\WrapperWrapper.cs" />
@@ -52,11 +53,13 @@
         <Compile Include="src\DisruptorUnity3d\AltRingBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\ConcurrentCircularBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\RingBuffer.cs" />
+        <Compile Include="src\LogContext.cs" />
         <Compile Include="src\Patches\BepInExChainloaderPatch.cs" />
         <Compile Include="src\Patches\BepInExLogEventArgsPatch.cs" />
-        <Compile Include="src\Patches\BepInExUnityLogSourcePatch.cs" />
         <Compile Include="src\PluginConfig.cs" />
         <Compile Include="src\Properties\AssemblyInfo.cs" />
+        <Compile Include="src\Sqlite\SQLite.cs" />
+        <Compile Include="src\Sqlite\SQLiteAsync.cs" />
         <Compile Include="src\Wrappers\AsyncWrapper.cs" />
         <Compile Include="src\Wrappers\ThreadWrapper.cs" />
         <Compile Include="src\Wrappers\BepInEx\AsyncLogListenerWrapper.cs" />

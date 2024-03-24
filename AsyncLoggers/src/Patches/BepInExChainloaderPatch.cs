@@ -1,6 +1,10 @@
-﻿using System.Linq;
+﻿using System;
+using System.IO;
+using System.Linq;
 using System.Reflection;
+using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.Wrappers.BepInEx;
+using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -11,7 +15,25 @@ namespace AsyncLoggers.Patches
     [HarmonyPatch]
     internal class BepInExChainloaderPatch
     {
-        
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Initialize))]
+        private static void AddSqliteListener()
+        {
+            try
+            {
+                if (PluginConfig.DbLogger.Enabled.Value)
+                {
+                    AsyncLoggerPreloader.Log.LogWarning($"Adding Sqlite to BepInEx Listeners");
+                    BepInEx.Logging.Logger.Listeners.Add(
+                        new SqliteListener(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite")));
+                }
+            }
+            catch (Exception ex)
+            {
+                AsyncLoggerPreloader.Log.LogError($"Exception starting {ex}");
+            }
+        }
+
         [HarmonyPostfix]
         [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Initialize))]
         private static void UseAsyncLogListeners()
@@ -60,7 +82,7 @@ namespace AsyncLoggers.Patches
             {
                 if (type == LogType.Exception)
                 {
-                    var customStack = AsyncLoggerPreloader.GetLogStackTrace();
+                    var customStack = LogContext.Stacktrace;
                     if (customStack != null)
                     {
                         var sections = stackTrace.Trim().Split('\n').ToList();

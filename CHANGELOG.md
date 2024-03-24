@@ -1,6 +1,6 @@
-# v1.4.1
+# v1.5.0
 - add incremental counter as TimeStamp option
-- WIP
+- add option to write a Sqlite DB for collecting logs
 
 # v1.4.0
 - add Timestamps to BepInEx logs

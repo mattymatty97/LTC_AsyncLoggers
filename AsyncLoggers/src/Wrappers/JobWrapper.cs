@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using DisruptorUnity3d;
 using Unity.Jobs;
@@ -36,8 +37,12 @@ namespace AsyncLoggers.Wrappers
             if (_shouldRun != DefaultCondition) 
                 return;
             
-            var timestamp = AsyncLoggerPreloader.GetLogTimestamp();
-            var stacktrace = AsyncLoggerPreloader.GetLogStackTrace(true,3);
+            
+            var logUUID = LogContext.Uuid;
+            var timestamp = LogContext.Timestamp;
+            var stacktrace = LogContext.Stacktrace;
+            if (stacktrace == null)
+                stacktrace = new StackTrace(2).ToString();
 
             _taskRingBuffer.Enqueue(CallbackWrapper);
 
@@ -50,14 +55,18 @@ namespace AsyncLoggers.Wrappers
             {
                 try
                 {
-                    AsyncLoggerPreloader.logTimestamp.Value = timestamp;
-                    AsyncLoggerPreloader.logStackTrace.Value = stacktrace;
+                    LogContext.Async = true;
+                    LogContext.Timestamp = timestamp;
+                    LogContext.Stacktrace = stacktrace;
+                    LogContext.Uuid = logUUID;
                     callback();
                 }
                 finally
                 {
-                    AsyncLoggerPreloader.logTimestamp.Value = null;
-                    AsyncLoggerPreloader.logStackTrace.Value = null;
+                    LogContext.Async = false;
+                    LogContext.Timestamp = null;
+                    LogContext.Stacktrace = null;
+                    LogContext.Uuid = null;
                 }
             }
         }

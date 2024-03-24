@@ -2,6 +2,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <!-- Defining the file names of project-specific data we'll load later. -->
     <PropertyGroup>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
         <AssetTargetsFile>Assets.targets</AssetTargetsFile>
         <GameDirTargetsFile>GameDirectory.targets</GameDirTargetsFile>
         <GameDirTargetsFullPath>$(ProjectDir)$(GameDirTargetsFile)</GameDirTargetsFullPath>
@@ -12,6 +13,9 @@
         <ThunderStoreItems Include="..\README.md"/>
         <ThunderStoreItems Include="..\CHANGELOG.md"/>
         <ThunderStoreItems Include="..\AsyncLoggers.DLL.in.patchers"/>
+    </ItemGroup>    
+    <ItemGroup>
+<!--        <Dependencies Include="..\packages\System.Data.SQLite.dll"/>-->
     </ItemGroup>
     <!-- Defining the reference files that have to be publicized. -->
     <ItemGroup>
@@ -76,6 +80,7 @@
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(TempZipDir)\$(ZipStructure)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(TempZipDir)\$(ZipStructure)\%(Assets.RelativeDir)"/>
         <Copy SourceFiles="@(ThunderStoreItems)" DestinationFolder="$(TempZipDir)\$(ThunderStoreItems)"/>
+        <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(TempZipDir)\Dependency\$(Dependencies)"/>
     </Target>
     <Target Name="CreateZip" AfterTargets="PrepareZip" Condition="$(Configuration.Contains('Release'))">
         <Message Importance="high" Text="Zipping project for distribution."/>

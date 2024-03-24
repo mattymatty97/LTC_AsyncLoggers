@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading;
 using AsyncLoggers.Cecil;
 using AsyncLoggers.Patches;
 using AsyncLoggers.Wrappers;
@@ -15,13 +12,10 @@ namespace AsyncLoggers
 {
     public static class AsyncLoggerPreloader
     {
-        internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggerPreloader));
+        internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
         internal static Harmony _harmony;
 
         internal static int startTime;
-        internal static readonly ThreadLocal<object> logTimestamp = new ThreadLocal<object>();
-        internal static readonly ThreadLocal<object> logStackTrace = new ThreadLocal<object>();
-        internal static long logCounter = 0L;
         
         public static IEnumerable<string> TargetDLLs { get; } = new string[]{"UnityEngine.CoreModule.dll"};
         public static void Patch(AssemblyDefinition assembly)
@@ -51,16 +45,13 @@ namespace AsyncLoggers
                 case PluginConfig.TimestampType.DateTime:
                     GetLogTimestamp = () =>
                     {
-                        if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
-                            return logTimestamp.Value;
-                        return DateTime.Now.ToString("HH:mm:ss.fffffff");
+                        var timestamp = LogContext.Timestamp;
+                        return timestamp.Substring(timestamp.Length - 16);
                     };
                     break;
                 case PluginConfig.TimestampType.TickCount:
                     GetLogTimestamp = () =>
                     {
-                        if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
-                            return logTimestamp.Value;
                         var timestamp = $"{(Environment.TickCount & Int32.MaxValue) - startTime:0000000000000000}";
                         return timestamp.Substring(timestamp.Length - 16);
                     };
@@ -68,9 +59,7 @@ namespace AsyncLoggers
                 case PluginConfig.TimestampType.Counter:
                     GetLogTimestamp = () =>
                     {
-                        if (logTimestamp.IsValueCreated && logTimestamp.Value != null)
-                            return logTimestamp.Value;
-                        var timestamp = $"{Interlocked.Increment(ref logCounter):0000000000000000}";
+                        var timestamp = $"{LogContext.Uuid:0000000000000000}";
                         return timestamp.Substring(timestamp.Length - 16);
                     };
                     break;
@@ -89,15 +78,6 @@ namespace AsyncLoggers
         }
 
         internal static Func<object> GetLogTimestamp;
-
-        internal static object GetLogStackTrace(bool create= false, int skippedCalls = 1)
-        {
-            if (logStackTrace.IsValueCreated && logStackTrace.Value != null)
-                return logStackTrace.Value;
-            if (create)
-                return new StackTrace(skippedCalls).ToString();
-            return null;
-        }
         
         internal static void OnApplicationQuit()
         {

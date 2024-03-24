@@ -12,7 +12,7 @@ namespace AsyncLoggers
     {
         public const string GUID = "mattymatty.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
-        public const string VERSION = "1.4.1";
+        public const string VERSION = "1.5.0";
 
         [SuppressMessage("ReSharper", "ConvertIfStatementToSwitchStatement")]
         private void Awake()
@@ -21,7 +21,7 @@ namespace AsyncLoggers
             {
                 if (LobbyCompatibilityProxy.Enabled)
                     LobbyCompatibilityProxy.Init();
-                    
+                
                 Application.quitting += AsyncLoggerPreloader.OnApplicationQuit;
             }
             catch (Exception ex)

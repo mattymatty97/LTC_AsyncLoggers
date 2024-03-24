@@ -16,7 +16,14 @@ namespace AsyncLoggers
             Timestamps.Enabled = config.Bind("Timestamps","enabled",true
                 ,"add numeric timestamps to the logs");
             Timestamps.Type = config.Bind("Timestamps","type",TimestampType.DateTime
-                ,"what kind of timestamps to use");
+                ,"what kind of timestamps to use");            
+            //DbLogger
+            DbLogger.Enabled = config.Bind("DbLogger","enabled",true
+                ,"flush logs to a Sqlite database");
+            DbLogger.RotationSize = config.Bind("DbLogger","rotation_size", 100000000L
+                ,"how big the file can grow before it is rotated ( in bytes )");
+            DbLogger.StackTraces = config.Bind("DbLogger","stacktrace", false
+                ,"save the stacktrace of all log lines ( will increase the file size )");
             //Scheduler
             Scheduler.JobBufferSize = config.Bind("Scheduler","job_buffer_size",1024U
                 ,"maximum size of the log queue for the Job Scheduler ( only one Job scheduler exists! )");
@@ -57,6 +64,13 @@ namespace AsyncLoggers
             public static ConfigEntry<uint> JobBufferSize;
             public static ConfigEntry<uint> ThreadBufferSize;
             public static ConfigEntry<ShutdownType> ShutdownType;
+        }
+        
+        public static class DbLogger
+        {
+            public static ConfigEntry<bool> Enabled;
+            public static ConfigEntry<long> RotationSize;
+            public static ConfigEntry<bool> StackTraces;
         }
         
         public static class Timestamps
