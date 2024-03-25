@@ -1,6 +1,11 @@
+# v1.5.1
+- cleanup and minor bugs caused by forgotten debug lines
+
 # v1.5.0
 - add incremental counter as TimeStamp option
 - add option to write a Sqlite DB for collecting logs
+- improve performance of TimeStamps
+- Disable StackTraces by default
 
 # v1.4.0
 - add Timestamps to BepInEx logs

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.ExceptionServices;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -29,7 +30,18 @@ namespace AsyncLoggers.Wrappers.Unity
 
         public void LogException(Exception exception, Object context)
         {
-            _wrapper.Schedule(()=>_baseLogger.LogException(exception, context));
+            ExceptionDispatchInfo dispatchInfo = ExceptionDispatchInfo.Capture(exception);
+            _wrapper.Schedule(()=>
+            {
+                try
+                {
+                    dispatchInfo.Throw();
+                }
+                catch (Exception ex)
+                {
+                    _baseLogger.LogException(ex, context);
+                }
+            });
         }
 
         public bool IsLogTypeAllowed(LogType logType)
@@ -99,7 +111,18 @@ namespace AsyncLoggers.Wrappers.Unity
 
         public void LogException(Exception exception)
         {
-            _wrapper.Schedule(() =>_baseLogger.LogException(exception));
+            ExceptionDispatchInfo dispatchInfo = ExceptionDispatchInfo.Capture(exception);
+            _wrapper.Schedule(() =>
+            {
+                try
+                {
+                    dispatchInfo.Throw();
+                }
+                catch (Exception ex)
+                {
+                    _baseLogger.LogException(ex);
+                }
+            });
         }
 
         public ILogHandler logHandler

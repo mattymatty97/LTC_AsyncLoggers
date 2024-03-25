@@ -40,21 +40,12 @@ namespace AsyncLoggers.BepInExListeners
 
         public void LogEvent(object sender, LogEventArgs eventArgs)
         {
-            StackTrace stacktrace = null;
-            if (PluginConfig.StackTraces.Enabled.Value)
-            {
-                stacktrace = LogContext.Stacktrace;
-                if (stacktrace == null)
-                    stacktrace = new StackTrace(false);
-            }
-            
             StringBuilder sb = new StringBuilder();
             sb.Append((int)LogContext.Uuid!).Append("\t");
             sb.Append(LogContext.Timestamp!.Value.ToString("MM/dd/yyyy HH:mm:ss.fffffff")).Append("\t");
             sb.Append(eventArgs.Source.SourceName).Append("\t");
             sb.Append(eventArgs.Level.ToString()).Append("\t");
             sb.Append(WebUtility.HtmlEncode(eventArgs.Data.ToString())).Append("\t");
-            sb.Append(WebUtility.HtmlEncode(stacktrace?.ToString())).Append("\t");
             LogWriter.WriteLine(sb.ToString());
         }
 

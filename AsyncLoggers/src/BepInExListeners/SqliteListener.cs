@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using BepInEx.Logging;
 using SQLite;
 using LogEventArgs = BepInEx.Logging.LogEventArgs;
 #pragma warning disable CS0169 // Field is never used
-using System.Runtime.InteropServices;
 
 namespace AsyncLoggers.BepInExListeners
 {
@@ -27,10 +25,9 @@ namespace AsyncLoggers.BepInExListeners
     
     public class SqliteListener : ILogListener
     {
-
         
         private readonly string _filePath;
-        private readonly SQLiteAsyncConnection connection;
+        private readonly SQLiteConnection connection;
 
         private readonly int execution_id;
 
@@ -45,34 +42,21 @@ namespace AsyncLoggers.BepInExListeners
                 AsyncLoggerPreloader.Log.LogDebug($"db existed and was {filesize} bytes");
             }
             
-            connection = new SQLiteAsyncConnection(outputFile);
+            connection = new SQLiteConnection(outputFile);
             AsyncLoggerPreloader.Log.LogDebug($"creating db");
             InitDb(connection);
             execution_id = GetExecution(connection);
-            if (execution_id > 2)
-            {
-                connection.DeleteAllAsync<Tables.Logs>();
-                connection.DeleteAllAsync<Tables.Executions>();
-                execution_id = GetExecution(connection);
-            }
 
             AsyncLoggerPreloader.Log.LogDebug($"ExecutionID is {execution_id}");
         }
 
         public void Dispose()
         {
+            connection.Dispose();
         }
 
         public void LogEvent(object sender, LogEventArgs eventArgs)
         {
-            StackTrace stacktrace = null;
-            if (PluginConfig.StackTraces.Enabled.Value)
-            {
-                stacktrace = LogContext.Stacktrace;
-                if (stacktrace == null)
-                    stacktrace = new StackTrace();
-            }
-
             var log = new Tables.Logs
             {
                 execution_id = execution_id,
@@ -80,26 +64,22 @@ namespace AsyncLoggers.BepInExListeners
                 timestamp = LogContext.Timestamp?.ToString("MM/dd/yyyy HH:mm:ss.fffffff"),
                 source = eventArgs.Source.SourceName,
                 level = eventArgs.Level.ToString(),
-                message = eventArgs.Data?.ToString(),
-                stacktrace = stacktrace?.ToString()
+                message = eventArgs.Data?.ToString()
             };
-            connection.InsertAsync(log);
+            connection.Insert(log);
         }
 
-        private static int GetExecution(SQLiteAsyncConnection connection)
+        private static int GetExecution(SQLiteConnection connection)
         {
             var execution = new Tables.Executions();
-            connection.InsertAsync(execution).Wait();
+            connection.Insert(execution);
             return execution._id;
         }
 
-        private static void InitDb(SQLiteAsyncConnection connection)
+        private static void InitDb(SQLiteConnection connection)
         {
-            Task[] tasks = {
-                connection.CreateTableAsync<Tables.Logs>(CreateFlags.AutoIncPK),
-                connection.CreateTableAsync<Tables.Executions>(CreateFlags.AutoIncPK)
-            };
-            Task.WaitAll(tasks);
+            connection.CreateTable<Tables.Logs>(CreateFlags.AutoIncPK);
+            connection.CreateTable<Tables.Executions>(CreateFlags.AutoIncPK);
         }
 
         internal static class Tables
@@ -118,7 +98,6 @@ namespace AsyncLoggers.BepInExListeners
                 [Indexed] public string source { get; set; }
                 [Indexed] public string level { get; set; }
                 public string message { get; set; }
-                public string stacktrace { get; set; }
             }
         }
     }

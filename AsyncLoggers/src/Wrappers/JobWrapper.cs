@@ -40,9 +40,6 @@ namespace AsyncLoggers.Wrappers
             
             var logUUID = LogContext.Uuid;
             var timestamp = LogContext.Timestamp;
-            var stacktrace = LogContext.Stacktrace;
-            if (stacktrace == null && PluginConfig.StackTraces.Enabled.Value)
-                stacktrace = new StackTrace(2, false);
 
             _taskRingBuffer.Enqueue(CallbackWrapper);
 
@@ -57,7 +54,6 @@ namespace AsyncLoggers.Wrappers
                 {
                     LogContext.Async = true;
                     LogContext.Timestamp = timestamp;
-                    LogContext.Stacktrace = stacktrace;
                     LogContext.Uuid = logUUID;
                     callback();
                 }
@@ -65,7 +61,6 @@ namespace AsyncLoggers.Wrappers
                 {
                     LogContext.Async = false;
                     LogContext.Timestamp = null;
-                    LogContext.Stacktrace = null;
                     LogContext.Uuid = null;
                 }
             }

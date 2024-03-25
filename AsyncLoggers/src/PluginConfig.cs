@@ -12,9 +12,6 @@ namespace AsyncLoggers
         {
             var config = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME + ".cfg"), true);
             //Initialize Configs
-            //StackTraces
-            StackTraces.Enabled = config.Bind("StackTraces","enabled",false
-                ,"capture extra information about logs ( might cause stutters in log heavy scenarios )");
             //Timestamps
             Timestamps.Enabled = config.Bind("Timestamps","enabled",true
                 ,"add numeric timestamps to the logs");
@@ -77,11 +74,6 @@ namespace AsyncLoggers
         {
             public static ConfigEntry<bool> Enabled;
             public static ConfigEntry<TimestampType> Type;
-        }
-        
-        public static class StackTraces
-        {
-            public static ConfigEntry<bool> Enabled;
         }
 
         public static class Unity

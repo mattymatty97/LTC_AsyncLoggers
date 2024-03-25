@@ -13,9 +13,6 @@ namespace AsyncLoggers
         private static DateTime? _timestamp;
 
         [ThreadStatic]
-        private static StackTrace _stacktrace;
-
-        [ThreadStatic]
         private static long? _UUID;
         
         internal static long logCounter = 0L;
@@ -36,12 +33,6 @@ namespace AsyncLoggers
                 return DateTime.UtcNow;
             }
             set => _timestamp = value;
-        }
-
-        public static StackTrace Stacktrace
-        {
-            get => _stacktrace;
-            set => _stacktrace = value;
         }
 
         public static long? Uuid
