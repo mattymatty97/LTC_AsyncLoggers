@@ -12,6 +12,9 @@ namespace AsyncLoggers
         {
             var config = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME + ".cfg"), true);
             //Initialize Configs
+            //StackTraces
+            StackTraces.Enabled = config.Bind("StackTraces","enabled",false
+                ,"capture extra information about logs ( might cause stutters in log heavy scenarios )");
             //Timestamps
             Timestamps.Enabled = config.Bind("Timestamps","enabled",true
                 ,"add numeric timestamps to the logs");
@@ -22,8 +25,6 @@ namespace AsyncLoggers
                 ,"flush logs to a Sqlite database");
             DbLogger.RotationSize = config.Bind("DbLogger","rotation_size", 100000000L
                 ,"how big the file can grow before it is rotated ( in bytes )");
-            DbLogger.StackTraces = config.Bind("DbLogger","stacktrace", false
-                ,"save the stacktrace of all log lines ( will increase the file size )");
             //Scheduler
             Scheduler.JobBufferSize = config.Bind("Scheduler","job_buffer_size",1024U
                 ,"maximum size of the log queue for the Job Scheduler ( only one Job scheduler exists! )");
@@ -70,13 +71,17 @@ namespace AsyncLoggers
         {
             public static ConfigEntry<bool> Enabled;
             public static ConfigEntry<long> RotationSize;
-            public static ConfigEntry<bool> StackTraces;
         }
         
         public static class Timestamps
         {
             public static ConfigEntry<bool> Enabled;
             public static ConfigEntry<TimestampType> Type;
+        }
+        
+        public static class StackTraces
+        {
+            public static ConfigEntry<bool> Enabled;
         }
 
         public static class Unity

@@ -46,7 +46,7 @@ namespace AsyncLoggers
                     GetLogTimestamp = () =>
                     {
                         var timestamp = LogContext.Timestamp;
-                        return timestamp.Substring(timestamp.Length - 16);
+                        return timestamp!.Value.ToString("HH:mm:ss.fffffff");
                     };
                     break;
                 case PluginConfig.TimestampType.TickCount:

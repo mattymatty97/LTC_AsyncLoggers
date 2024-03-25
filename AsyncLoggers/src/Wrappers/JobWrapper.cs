@@ -9,7 +9,7 @@ using UnityEngine;
 namespace AsyncLoggers.Wrappers
 {
     
-    public class JobWrapper: IAsyncWrapper
+    public class JobWrapper: IWrapper
     {
         private static long _IDSeed = 0;
         private readonly RunCondition DefaultCondition;
@@ -19,20 +19,20 @@ namespace AsyncLoggers.Wrappers
 
         private JobHandle? _loggingJob;
         private readonly LogJob _loggingJobStruct;
-        private readonly ConcurrentCircularBuffer<IAsyncWrapper.LogCallback> _taskRingBuffer;
+        private readonly ConcurrentCircularBuffer<IWrapper.LogCallback> _taskRingBuffer;
         private volatile RunCondition _shouldRun;
 
         public JobWrapper()
         {
             var _id = Interlocked.Add(ref _IDSeed, 1);
             INSTANCES[_id] = this;
-            _taskRingBuffer = new ConcurrentCircularBuffer<IAsyncWrapper.LogCallback>(PluginConfig.Scheduler.JobBufferSize.Value);
+            _taskRingBuffer = new ConcurrentCircularBuffer<IWrapper.LogCallback>(PluginConfig.Scheduler.JobBufferSize.Value);
             DefaultCondition = ()=>_taskRingBuffer.Count > 0;
             _shouldRun = DefaultCondition;
             _loggingJobStruct = new LogJob(_id);
         }
 
-        public void Schedule(IAsyncWrapper.LogCallback callback)
+        public void Schedule(IWrapper.LogCallback callback)
         {
             if (_shouldRun != DefaultCondition) 
                 return;
@@ -41,8 +41,8 @@ namespace AsyncLoggers.Wrappers
             var logUUID = LogContext.Uuid;
             var timestamp = LogContext.Timestamp;
             var stacktrace = LogContext.Stacktrace;
-            if (stacktrace == null)
-                stacktrace = new StackTrace(2).ToString();
+            if (stacktrace == null && PluginConfig.StackTraces.Enabled.Value)
+                stacktrace = new StackTrace(2, false);
 
             _taskRingBuffer.Enqueue(CallbackWrapper);
 

@@ -6,7 +6,7 @@ namespace AsyncLoggers.Wrappers.BepInEx
     public class AsyncLogListenerWrapper: ILogListener
     {
         
-        private readonly IAsyncWrapper _threadWrapper;
+        private readonly IWrapper _threadWrapper;
         private readonly ILogListener _baseListener;
 
         public AsyncLogListenerWrapper(ILogListener baseListener)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 
 namespace AsyncLoggers
@@ -9,10 +10,10 @@ namespace AsyncLoggers
         private static bool _async;
         
         [ThreadStatic]
-        private static string _timestamp;
+        private static DateTime? _timestamp;
 
         [ThreadStatic]
-        private static string _stacktrace;
+        private static StackTrace _stacktrace;
 
         [ThreadStatic]
         private static long? _UUID;
@@ -26,18 +27,18 @@ namespace AsyncLoggers
             set => _async = value;
         }
 
-        public static string Timestamp
+        public static DateTime? Timestamp
         {
             get
             {
                 if (_timestamp != null)
                     return _timestamp;
-                return DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss.fffffff");
+                return DateTime.UtcNow;
             }
             set => _timestamp = value;
         }
 
-        public static string Stacktrace
+        public static StackTrace Stacktrace
         {
             get => _stacktrace;
             set => _stacktrace = value;

@@ -13,9 +13,9 @@
         <ThunderStoreItems Include="..\README.md"/>
         <ThunderStoreItems Include="..\CHANGELOG.md"/>
         <ThunderStoreItems Include="..\AsyncLoggers.DLL.in.patchers"/>
-    </ItemGroup>    
+    </ItemGroup>
     <ItemGroup>
-<!--        <Dependencies Include="..\packages\System.Data.SQLite.dll"/>-->
+        <Dependencies Include="..\packages\sqlite3.dll"/>
     </ItemGroup>
     <!-- Defining the reference files that have to be publicized. -->
     <ItemGroup>
@@ -60,6 +60,7 @@
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDirectory)"/>
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModDirectory)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(ModDirectory)\%(Assets.RelativeDir)"/>
+        <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(ModDirectory)\$(Dependencies)"/>
     </Target>
 
     <!-- Find the current version of the assembly. -->
@@ -80,7 +81,7 @@
         <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(TempZipDir)\$(ZipStructure)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(TempZipDir)\$(ZipStructure)\%(Assets.RelativeDir)"/>
         <Copy SourceFiles="@(ThunderStoreItems)" DestinationFolder="$(TempZipDir)\$(ThunderStoreItems)"/>
-        <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(TempZipDir)\Dependency\$(Dependencies)"/>
+        <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(TempZipDir)\$(ZipStructure)\$(Dependencies)"/>
     </Target>
     <Target Name="CreateZip" AfterTargets="PrepareZip" Condition="$(Configuration.Contains('Release'))">
         <Message Importance="high" Text="Zipping project for distribution."/>

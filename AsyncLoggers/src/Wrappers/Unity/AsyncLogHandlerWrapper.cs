@@ -6,7 +6,7 @@ namespace AsyncLoggers.Wrappers.Unity
 {
     public class AsyncLogHandlerWrapper: ILogHandler
     {
-        private readonly IAsyncWrapper _asyncWrapper;
+        private readonly IWrapper _wrapper;
         private readonly ILogHandler _baseHandler;
 
         public AsyncLogHandlerWrapper(ILogHandler baseHandler)
@@ -14,22 +14,22 @@ namespace AsyncLoggers.Wrappers.Unity
             if (baseHandler is AsyncLogHandlerWrapper)
                 throw new ArgumentException("Cannot nest AsyncLoggers");
             if (PluginConfig.Unity.Scheduler.Value == PluginConfig.AsyncType.Thread)
-                _asyncWrapper = new ThreadWrapper();
+                _wrapper = new ThreadWrapper();
             else
             {
-                _asyncWrapper = new JobWrapper();
+                _wrapper = new JobWrapper();
             }
             _baseHandler = baseHandler;
         }
 
         public void LogFormat(LogType logType, Object context, string format, params object[] args)
         {
-            _asyncWrapper.Schedule(()=>_baseHandler.LogFormat(logType, context, format, args));
+            _wrapper.Schedule(()=>_baseHandler.LogFormat(logType, context, format, args));
         }
         
         public void LogException(Exception exception, Object context)
         {
-            _asyncWrapper.Schedule(() => _baseHandler.LogException(exception, context));
+            _wrapper.Schedule(() => _baseHandler.LogException(exception, context));
         }
 
     }

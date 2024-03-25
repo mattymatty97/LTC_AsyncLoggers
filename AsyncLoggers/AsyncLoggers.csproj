@@ -46,6 +46,7 @@
         <Compile Include="src\AsyncLoggerPreloader.cs" />
         <Compile Include="src\AsyncLoggers.cs" />
         <Compile Include="src\BepInExListeners\SqliteListener.cs" />
+        <Compile Include="src\BepInExListeners\TsvListener.cs" />
         <Compile Include="src\Cecil\BepInExChainloaderCecilPatch.cs" />
         <Compile Include="src\Cecil\UnityLogsCecilPatch.cs" />
         <Compile Include="src\Cecil\WrapperWrapper.cs" />
@@ -60,7 +61,7 @@
         <Compile Include="src\Properties\AssemblyInfo.cs" />
         <Compile Include="src\Sqlite\SQLite.cs" />
         <Compile Include="src\Sqlite\SQLiteAsync.cs" />
-        <Compile Include="src\Wrappers\AsyncWrapper.cs" />
+        <Compile Include="src\Wrappers\IWrapper.cs" />
         <Compile Include="src\Wrappers\ThreadWrapper.cs" />
         <Compile Include="src\Wrappers\BepInEx\AsyncLogListenerWrapper.cs" />
         <Compile Include="src\Wrappers\JobWrapper.cs" />

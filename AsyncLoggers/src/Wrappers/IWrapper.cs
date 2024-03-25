@@ -1,10 +1,6 @@
-﻿using System;
-using System.Threading;
-using DisruptorUnity3d;
-
-namespace AsyncLoggers.Wrappers
+﻿namespace AsyncLoggers.Wrappers
 {
-    public interface IAsyncWrapper
+    public interface IWrapper
     {
         public delegate void LogCallback();
 

@@ -46,23 +46,23 @@ namespace AsyncLoggers.BepInExListeners
 
         public void LogEvent(object sender, LogEventArgs eventArgs)
         {
-            string stacktrace = null;
-            if (PluginConfig.DbLogger.StackTraces.Value)
+            StackTrace stacktrace = null;
+            if (PluginConfig.StackTraces.Enabled.Value)
             {
                 stacktrace = LogContext.Stacktrace;
                 if (stacktrace == null)
-                    stacktrace = new StackTrace().ToString();
+                    stacktrace = new StackTrace();
             }
 
             var log = new Tables.Logs
             {
                 execution_id = execution_id,
                 UUID = (int)LogContext.Uuid!,
-                timestamp = LogContext.Timestamp,
+                timestamp = LogContext.Timestamp?.ToString("MM/dd/yyyy HH:mm:ss.fffffff"),
                 source = eventArgs.Source.SourceName,
                 level = eventArgs.Level.ToString(),
-                message = eventArgs.Data.ToString(),
-                stacktrace = stacktrace
+                message = eventArgs.Data?.ToString(),
+                stacktrace = stacktrace?.ToString()
             };
             connection.InsertAsync(log);
         }

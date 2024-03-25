@@ -24,8 +24,9 @@ namespace AsyncLoggers.Patches
                 if (PluginConfig.DbLogger.Enabled.Value)
                 {
                     AsyncLoggerPreloader.Log.LogWarning($"Adding Sqlite to BepInEx Listeners");
-                    BepInEx.Logging.Logger.Listeners.Add(
-                        new SqliteListener(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite")));
+                    BepInEx.Logging.Logger.Listeners.Add( new SqliteListener(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite")));
+                    //BepInEx.Logging.Logger.Listeners.Add(
+                        //new AsyncLogListenerWrapper(new TsvListener(Path.Combine(Paths.BepInExRootPath, "LogOutput.tsv"))));
                 }
             }
             catch (Exception ex)
@@ -83,7 +84,7 @@ namespace AsyncLoggers.Patches
                 if (type == LogType.Exception)
                 {
                     var customStack = LogContext.Stacktrace;
-                    if (customStack != null)
+                    if (customStack != null || !PluginConfig.StackTraces.Enabled.Value)
                     {
                         var sections = stackTrace.Trim().Split('\n').ToList();
                         var isJob = sections[sections.Count - 1].StartsWith("Unity.Jobs.JobStruct");
@@ -103,7 +104,8 @@ namespace AsyncLoggers.Patches
                             {
                                 if (to_remove < sections.Count - 2)
                                     sections.RemoveRange(sections.Count - to_remove, to_remove);
-                                stackTrace = string.Join("\n", sections) + "\n" + ((string)customStack).Replace("  at ", "") + "\n";
+                                stackTrace = string.Join("\n", sections) + "\n" + (customStack!=null?
+                                    customStack.ToString().Replace("  at ", "") + "\n":"");
                             }
                         }
                     }
