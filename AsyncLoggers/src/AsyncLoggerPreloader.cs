@@ -39,7 +39,7 @@ namespace AsyncLoggers
             Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Started");
             startTime = Environment.TickCount & Int32.MaxValue;
             if (PluginConfig.Timestamps.Enabled.Value)
-                Log.LogWarning($"{AsyncLoggers.NAME} Timestamps start at {DateTime.Now.ToString("dddd, dd MMMM yyyy HH:mm:ss.fffffff")}");
+                Log.LogWarning($"{AsyncLoggers.NAME} Timestamps start at {DateTime.UtcNow.ToString("dddd, dd MMMM yyyy HH:mm:ss.fffffff")} UTC");
             switch (PluginConfig.Timestamps.Type.Value)
             {
                 case PluginConfig.TimestampType.DateTime:

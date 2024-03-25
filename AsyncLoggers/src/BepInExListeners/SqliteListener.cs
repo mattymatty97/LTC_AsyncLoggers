@@ -1,15 +1,34 @@
-﻿using System.Diagnostics;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using BepInEx.Logging;
 using SQLite;
 using LogEventArgs = BepInEx.Logging.LogEventArgs;
 #pragma warning disable CS0169 // Field is never used
+using System.Runtime.InteropServices;
 
 namespace AsyncLoggers.BepInExListeners
 {
+    public static class SqliteChecker
+    {
+        internal static bool isLoaded() {
+            try
+            {
+                SQLite3.LibVersionNumber();
+                return true;
+            }
+            catch (DllNotFoundException)
+            {
+                return false;
+            }
+        }
+    }
+    
     public class SqliteListener : ILogListener
     {
+
+        
         private readonly string _filePath;
         private readonly SQLiteAsyncConnection connection;
 
@@ -76,8 +95,7 @@ namespace AsyncLoggers.BepInExListeners
 
         private static void InitDb(SQLiteAsyncConnection connection)
         {
-            var tasks = new[]
-            {
+            Task[] tasks = {
                 connection.CreateTableAsync<Tables.Logs>(CreateFlags.AutoIncPK),
                 connection.CreateTableAsync<Tables.Executions>(CreateFlags.AutoIncPK)
             };

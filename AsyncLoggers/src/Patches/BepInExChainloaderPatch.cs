@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.Wrappers.BepInEx;
 using BepInEx;
@@ -21,7 +22,7 @@ namespace AsyncLoggers.Patches
         {
             try
             {
-                if (PluginConfig.DbLogger.Enabled.Value)
+                if (PluginConfig.DbLogger.Enabled.Value && SqliteChecker.isLoaded())
                 {
                     AsyncLoggerPreloader.Log.LogWarning($"Adding Sqlite to BepInEx Listeners");
                     BepInEx.Logging.Logger.Listeners.Add( new SqliteListener(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite")));
