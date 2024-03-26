@@ -12,7 +12,9 @@
         <ThunderStoreItems Include="..\manifest.json"/>
         <ThunderStoreItems Include="..\README.md"/>
         <ThunderStoreItems Include="..\CHANGELOG.md"/>
-        <ThunderStoreItems Include="..\AsyncLoggers.DLL.in.patchers"/>
+    </ItemGroup>
+    <ItemGroup>
+        <Integration Include="..\integration\AsyncLoggerProxy.cs"/>
     </ItemGroup>
     <ItemGroup>
         <Dependencies Include="..\packages\sqlite3.dll"/>
@@ -47,20 +49,23 @@
     </Target>
     <PropertyGroup>
         <!-- The mod directory to install our mod to. -->
-        <ModDirectory>$(ProfileDirectory)\BepInEx\patchers\0-$(AssemblyName)</ModDirectory>
+        <ModDirectory1>$(ProfileDirectory)\BepInEx\patchers\0-$(AssemblyName)</ModDirectory1>
+        <ModDirectory2>$(ProfileDirectory)\BepInEx\plugins\0-$(AssemblyName)</ModDirectory2>
         <!-- Where to create the temporary directory for creating the release zip files. -->
         <TempZipDir>$(OutputPath)ZipMeUp</TempZipDir>
         <!-- The internal structure of the zip file. -->
-        <ZipStructure>BepInEx\patchers</ZipStructure>
+        <PatcherZipStructure>BepInEx\patchers</PatcherZipStructure>
+        <PluginZipStructure>BepInEx\plugins</PluginZipStructure>
     </PropertyGroup>
 
     <!-- Copy newly built files to the game directory. -->
     <Target Name="CopyToGameFolder" AfterTargets="Build">
-        <Message Importance="high" Text="Copying files to game directory. ($(ModDirectory))"/>
-        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDirectory)"/>
-        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModDirectory)"/>
-        <Copy SourceFiles="@(Assets)" DestinationFolder="$(ModDirectory)\%(Assets.RelativeDir)"/>
-        <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(ModDirectory)\$(Dependencies)"/>
+        <Message Importance="high" Text="Copying files to game directory. ($(ModDirectory1),$(ModDirectory2))"/>
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDirectory1)"/>
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDirectory2)"/>
+        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModDirectory1)"/>
+        <Copy SourceFiles="@(Assets)" DestinationFolder="$(ModDirectory2)\%(Assets.RelativeDir)"/>
+        <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(ModDirectory1)\$(Dependencies)"/>
     </Target>
 
     <!-- Find the current version of the assembly. -->
@@ -77,11 +82,13 @@
     <!-- Automatically create the zip file, ready for distribution. -->
     <Target Name="PrepareZip" AfterTargets="Build" Condition="$(Configuration.Contains('Release'))">
         <Message Importance="normal" Text="Copying files to temporary directory."/>
-        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TempZipDir)\$(ZipStructure)"/>
-        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(TempZipDir)\$(ZipStructure)"/>
-        <Copy SourceFiles="@(Assets)" DestinationFolder="$(TempZipDir)\$(ZipStructure)\%(Assets.RelativeDir)"/>
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TempZipDir)\$(PluginZipStructure)"/>
+        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TempZipDir)\$(PatcherZipStructure)"/>
+        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(TempZipDir)\$(PatcherZipStructure)"/>
+        <Copy SourceFiles="@(Assets)" DestinationFolder="$(TempZipDir)\$(PluginZipStructure)\%(Assets.RelativeDir)"/>
         <Copy SourceFiles="@(ThunderStoreItems)" DestinationFolder="$(TempZipDir)\$(ThunderStoreItems)"/>
-        <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(TempZipDir)\$(ZipStructure)\$(Dependencies)"/>
+        <Copy SourceFiles="@(Integration)" DestinationFolder="$(TempZipDir)\IntegrationExamples\$(Integration)"/>
+        <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(TempZipDir)\$(PatcherZipStructure)\$(Dependencies)"/>
     </Target>
     <Target Name="CreateZip" AfterTargets="PrepareZip" Condition="$(Configuration.Contains('Release'))">
         <Message Importance="high" Text="Zipping project for distribution."/>

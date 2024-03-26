@@ -3,6 +3,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using System.Threading;
+using AsyncLoggers.StaticContexts;
 using BepInEx;
 using BepInEx.Logging;
 
@@ -40,9 +41,10 @@ namespace AsyncLoggers.BepInExListeners
 
         public void LogEvent(object sender, LogEventArgs eventArgs)
         {
+            //TODO: properly escape message!
             StringBuilder sb = new StringBuilder();
             sb.Append((int)LogContext.Uuid!).Append("\t");
-            sb.Append(LogContext.Timestamp!.Value.ToString("MM/dd/yyyy HH:mm:ss.fffffff")).Append("\t");
+            sb.Append(GenericContext.FormatTimestamp(GenericContext.Timestamp)).Append("\t");
             sb.Append(eventArgs.Source.SourceName).Append("\t");
             sb.Append(eventArgs.Level.ToString()).Append("\t");
             sb.Append(WebUtility.HtmlEncode(eventArgs.Data.ToString())).Append("\t");

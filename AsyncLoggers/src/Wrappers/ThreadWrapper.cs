@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using AsyncLoggers.StaticContexts;
 using DisruptorUnity3d;
 using UnityEngine;
 
@@ -17,9 +18,11 @@ namespace AsyncLoggers.Wrappers
         private readonly ConcurrentCircularBuffer<IWrapper.LogCallback> _taskRingBuffer;
         private static readonly RunCondition DefaultCondition = ()=>true;
         private volatile RunCondition _shouldRun = DefaultCondition;
+        internal static IWrapper.ContextType ContextType { get; private set; }
 
-        internal ThreadWrapper()
+        internal ThreadWrapper(IWrapper.ContextType contextType = IWrapper.ContextType.Log)
         {
+            ContextType = contextType;
             _taskRingBuffer = new ConcurrentCircularBuffer<IWrapper.LogCallback>(PluginConfig.Scheduler.ThreadBufferSize.Value);
             _semaphore = new SemaphoreSlim(0);
             _loggingThread = new Thread(LogWorker);
@@ -72,14 +75,24 @@ namespace AsyncLoggers.Wrappers
                 }
             }
         }
+
+        private long getUUID()
+        {
+            return ContextType switch
+            {
+                IWrapper.ContextType.Log => LogContext.Uuid!.Value,
+                IWrapper.ContextType.Event => EventContext.Uuid!.Value,
+                _ => -1L
+            };
+        }
         
         public void Schedule(IWrapper.LogCallback callback)
         {
             if (_shouldRun != DefaultCondition) 
                 return;
             
-            var logUUID = LogContext.Uuid;
-            var timestamp = LogContext.Timestamp;
+            var uuid = getUUID();
+            var timestamp = GenericContext.Timestamp;
 
             _taskRingBuffer.Enqueue(CallbackWrapper);
             _semaphore.Release();
@@ -89,16 +102,27 @@ namespace AsyncLoggers.Wrappers
             {
                 try
                 {
-                    LogContext.Async = true;
-                    LogContext.Timestamp = timestamp;
-                    LogContext.Uuid = logUUID;
+                    GenericContext.Async = true;
+                    GenericContext.Timestamp = timestamp;
+                    
+                    switch (ContextType)
+                    {
+                        case IWrapper.ContextType.Log:
+                            LogContext.Uuid = uuid;
+                            break;
+                        case IWrapper.ContextType.Event:
+                            EventContext.Uuid = uuid;
+                            break;
+                    }
+
                     callback();
                 }
                 finally
                 {
-                    LogContext.Async = false;
-                    LogContext.Timestamp = null;
+                    GenericContext.Async = false;
+                    GenericContext.Timestamp = null;
                     LogContext.Uuid = null;
+                    EventContext.Uuid = null;
                 }
             }
         }

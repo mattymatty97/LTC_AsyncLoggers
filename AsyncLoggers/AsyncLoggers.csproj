@@ -45,23 +45,26 @@
     <ItemGroup>
         <Compile Include="src\AsyncLoggerPreloader.cs" />
         <Compile Include="src\AsyncLoggers.cs" />
-        <Compile Include="src\BepInExListeners\AsyncSqliteListener.cs" />
         <Compile Include="src\BepInExListeners\SqliteListener.cs" />
         <Compile Include="src\BepInExListeners\TsvListener.cs" />
         <Compile Include="src\Cecil\BepInExChainloaderCecilPatch.cs" />
         <Compile Include="src\Cecil\UnityLogsCecilPatch.cs" />
         <Compile Include="src\Cecil\WrapperWrapper.cs" />
+        <Compile Include="src\DBAPI\SqliteLogger.cs" />
+        <Compile Include="src\DBAPI\SqliteLoggerImpl.cs" />
         <Compile Include="src\Dependency\LobbyCompatibilityProxy.cs" />
         <Compile Include="src\DisruptorUnity3d\AltRingBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\ConcurrentCircularBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\RingBuffer.cs" />
-        <Compile Include="src\LogContext.cs" />
         <Compile Include="src\Patches\BepInExChainloaderPatch.cs" />
         <Compile Include="src\Patches\BepInExLogEventArgsPatch.cs" />
         <Compile Include="src\PluginConfig.cs" />
         <Compile Include="src\Properties\AssemblyInfo.cs" />
         <Compile Include="src\Sqlite\SQLite.cs" />
         <Compile Include="src\Sqlite\SQLiteAsync.cs" />
+        <Compile Include="src\StaticContexts\EventContext.cs" />
+        <Compile Include="src\StaticContexts\GenericContext.cs" />
+        <Compile Include="src\StaticContexts\LogContext.cs" />
         <Compile Include="src\Wrappers\IWrapper.cs" />
         <Compile Include="src\Wrappers\ThreadWrapper.cs" />
         <Compile Include="src\Wrappers\BepInEx\AsyncLogListenerWrapper.cs" />
@@ -80,6 +83,7 @@
         <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.0.1" />
     </ItemGroup>
     <ItemGroup>
+      <Folder Include="integration\" />
       <Folder Include="src\Patches\Post\" />
     </ItemGroup>
     <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets"/>

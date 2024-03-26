@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using AsyncLoggers.Cecil;
+using AsyncLoggers.DBAPI;
 using AsyncLoggers.Patches;
+using AsyncLoggers.StaticContexts;
 using AsyncLoggers.Wrappers;
+using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
 using Mono.Cecil;
@@ -13,9 +17,9 @@ namespace AsyncLoggers
     public static class AsyncLoggerPreloader
     {
         internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
-        internal static Harmony _harmony;
+        private static Harmony _harmony;
 
-        internal static int startTime;
+        private static int startTime;
         
         public static IEnumerable<string> TargetDLLs { get; } = new string[]{"UnityEngine.CoreModule.dll"};
         public static void Patch(AssemblyDefinition assembly)
@@ -45,7 +49,7 @@ namespace AsyncLoggers
                 case PluginConfig.TimestampType.DateTime:
                     GetLogTimestamp = () =>
                     {
-                        var timestamp = LogContext.Timestamp;
+                        var timestamp = GenericContext.Timestamp;
                         return timestamp!.Value.ToString("HH:mm:ss.fffffff");
                     };
                     break;
@@ -71,6 +75,7 @@ namespace AsyncLoggers
         // Cannot be renamed, method name is important
         public static void Finish()
         {
+            SqliteLoggerImpl.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
             _harmony = new Harmony(AsyncLoggers.GUID);
             _harmony.PatchAll(typeof(BepInExLogEventArgsPatch));
             _harmony.PatchAll(typeof(BepInExChainloaderPatch));
@@ -89,6 +94,7 @@ namespace AsyncLoggers
             {
                 threadWrapper?.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
             }
+            SqliteLoggerImpl.Terminate(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
         }
     }
 }

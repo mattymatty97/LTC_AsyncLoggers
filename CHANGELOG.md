@@ -1,3 +1,9 @@
+# v1.6.0
+- added Mods table to SqliteDb
+- added Events table to SqliteDb
+- added ModData table to SqliteDb
+- new API for mods to write custom events and or data to sqliteDb ( intended use only for debug not as storage )
+
 # v1.5.1
 - cleanup and minor bugs caused by forgotten debug lines
 

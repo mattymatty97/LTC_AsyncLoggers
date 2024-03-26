@@ -6,8 +6,19 @@ Async Loggers
 
 ### YEET the logs to their own thread!
 
+# For the users:
+
 remove any log related delays by processing them separately from the game stuff.
 the more logs your modpack generates the bigger the impact this mod has!
+
+# For the Developers:
+
+included in the zip there is an example Proxy class to use for soft-depending on this mod
+to allow you to log custom events/data to the sqliteDB
+
+#### <u>Any Data written to the database is  for debug purposes only and is not persistent</u>
+
+#### minimum version for API is <u>v1.6.0</u>
 
 Installation
 ------------
