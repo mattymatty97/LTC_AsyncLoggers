@@ -70,7 +70,7 @@ namespace AsyncLoggers.DBAPI
                     tag = "Start",
                     data = "Process Started"
                 });
-                asyncScheduler = new ThreadWrapper(IWrapper.ContextType.Event);
+                asyncScheduler = new ThreadWrapper();
             }
             else
             {
@@ -88,51 +88,82 @@ namespace AsyncLoggers.DBAPI
         {
             if (Enabled)
             {
+                timestamp ??= GenericContext.Timestamp;
+                var uuid = EventContext.Uuid;
                 asyncScheduler.Schedule(() =>
                 {
-                    _WriteEvent(source, tag, data, timestamp);
+                    try
+                    {
+                        GenericContext.Async = true;
+                        GenericContext.Timestamp = timestamp;
+                        EventContext.Uuid = uuid;
+                        _WriteEvent(source, tag, data);
+                    }
+                    catch (Exception ex)
+                    {
+                        AsyncLoggerPreloader.Log.LogError(
+                            $"Exception writing event {source}/{tag}: {ex}");
+                    }finally
+                    {
+                        GenericContext.Async = false;
+                        GenericContext.Timestamp = null;
+                        EventContext.Uuid = null;
+                    }
                 });
             }
         }
         
-        private static void _WriteEvent(string source, string tag, string data, DateTime? timestamp = null)
+        private static void _WriteEvent(string source, string tag, string data)
         {
-            timestamp ??= GenericContext.Timestamp;
             var value = new Tables.Events
             {
                 execution_id = ExecutionId,
                 UUID = (int)EventContext.Uuid!,
-                timestamp = GenericContext.FormatTimestamp(timestamp),
+                timestamp = GenericContext.FormatTimestamp(GenericContext.Timestamp),
                 source = source,
                 tag = tag,
                 data = data
             };
             Connection.Insert(value);
             
-            Task.Factory.StartNew(()=>SqliteLogger.onEventWritten(value.UUID,value.source,value.tag,value.data,timestamp!.Value));
+            Task.Factory.StartNew(()=>SqliteLogger.onEventWritten(value.UUID,value.source,value.tag,value.data, GenericContext.Timestamp!.Value));
         }
         
         internal static void WriteData(string source, string tag, string data, DateTime? timestamp = null)
         {
             if (Enabled)
             {
-                EventContext.Uuid = 0;
+                timestamp ??= GenericContext.Timestamp;
                 asyncScheduler.Schedule(() =>
                 {
-                    _WriteData(source, tag, data, timestamp);
+                    try
+                    {
+                        GenericContext.Async = true;
+                        GenericContext.Timestamp = timestamp;
+                        EventContext.Uuid = 0L;
+                        _WriteData(source, tag, data);
+                    }
+                    catch (Exception ex)
+                    {
+                        AsyncLoggerPreloader.Log.LogError(
+                            $"Exception writing data {source}/{tag}: {ex}");
+                    }finally
+                    {
+                        GenericContext.Async = false;
+                        GenericContext.Timestamp = null;
+                        EventContext.Uuid = null;
+                    }
                 });
-                EventContext.Uuid = null;
             }
         }
         
-        private static void _WriteData(string source, string tag, string data, DateTime? timestamp = null)
+        private static void _WriteData(string source, string tag, string data)
         {
-            timestamp ??= GenericContext.Timestamp;
 
             var value = new Tables.ModData()
             {
                 execution_id = ExecutionId,
-                timestamp = GenericContext.FormatTimestamp(timestamp),
+                timestamp = GenericContext.FormatTimestamp(GenericContext.Timestamp),
                 source = source,
                 tag = tag,
                 data = data
@@ -140,7 +171,7 @@ namespace AsyncLoggers.DBAPI
             
             Connection.Insert(value);
             
-            Task.Factory.StartNew(()=>SqliteLogger.onDataWritten(value.source,value.tag,value.data,timestamp!.Value));
+            Task.Factory.StartNew(()=>SqliteLogger.onDataWritten(value.source,value.tag,value.data,GenericContext.Timestamp!.Value));
 
         }
         

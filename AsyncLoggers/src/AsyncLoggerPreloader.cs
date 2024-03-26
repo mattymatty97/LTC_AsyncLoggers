@@ -41,6 +41,7 @@ namespace AsyncLoggers
         {
             PluginConfig.Init();
             Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Started");
+            
             startTime = Environment.TickCount & Int32.MaxValue;
             if (PluginConfig.Timestamps.Enabled.Value)
                 Log.LogWarning($"{AsyncLoggers.NAME} Timestamps start at {DateTime.UtcNow.ToString("dddd, dd MMMM yyyy HH:mm:ss.fffffff")} UTC");
@@ -79,6 +80,7 @@ namespace AsyncLoggers
             _harmony = new Harmony(AsyncLoggers.GUID);
             _harmony.PatchAll(typeof(BepInExLogEventArgsPatch));
             _harmony.PatchAll(typeof(BepInExChainloaderPatch));
+            _harmony.PatchAll(typeof(BepInExLoggerPatcher));
             Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Finished");
         }
 

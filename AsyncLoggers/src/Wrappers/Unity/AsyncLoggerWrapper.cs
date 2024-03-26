@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Runtime.ExceptionServices;
+using AsmResolver.DotNet.Signatures;
+using AsyncLoggers.StaticContexts;
 using UnityEngine;
+using GenericContext = AsyncLoggers.StaticContexts.GenericContext;
 using Object = UnityEngine.Object;
 
 namespace AsyncLoggers.Wrappers.Unity
@@ -30,18 +33,7 @@ namespace AsyncLoggers.Wrappers.Unity
 
         public void LogException(Exception exception, Object context)
         {
-            ExceptionDispatchInfo dispatchInfo = ExceptionDispatchInfo.Capture(exception);
-            _wrapper.Schedule(()=>
-            {
-                try
-                {
-                    dispatchInfo.Throw();
-                }
-                catch (Exception ex)
-                {
-                    _baseLogger.LogException(ex, context);
-                }
-            });
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.LogException(exception, context)));
         }
 
         public bool IsLogTypeAllowed(LogType logType)
@@ -51,78 +43,67 @@ namespace AsyncLoggers.Wrappers.Unity
 
         public void Log(LogType logType, object message)
         {
-            _wrapper.Schedule(()=>_baseLogger.Log(logType, message));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.Log(logType, message)));
         }
 
         public void Log(LogType logType, object message, Object context)
         {
-            _wrapper.Schedule(()=>_baseLogger.Log(logType, message, context));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.Log(logType, message, context)));
         }
 
         public void Log(LogType logType, string tag, object message)
         {
-            _wrapper.Schedule(()=>_baseLogger.Log(logType, tag, message));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.Log(logType, tag, message)));
         }
 
         public void Log(LogType logType, string tag, object message, Object context)
         {
-            _wrapper.Schedule(()=>_baseLogger.Log(logType, tag, message, context));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.Log(logType, tag, message, context)));
         }
 
         public void Log(object message)
         {
-            _wrapper.Schedule(()=>_baseLogger.Log(message));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.Log(message)));
         }
 
         public void Log(string tag, object message)
         {
-            _wrapper.Schedule(()=>_baseLogger.Log(tag, message));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.Log(tag, message)));
         }
 
         public void Log(string tag, object message, Object context)
         {
-            _wrapper.Schedule(()=>_baseLogger.Log(tag, message, context));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.Log(tag, message, context)));
         }
 
         public void LogWarning(string tag, object message)
         {
-            _wrapper.Schedule(()=>_baseLogger.LogWarning(tag, message));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.LogWarning(tag, message)));
         }
 
         public void LogWarning(string tag, object message, Object context)
         {
-            _wrapper.Schedule(()=>_baseLogger.LogWarning(tag, message, context));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.LogWarning(tag, message, context)));
         }
 
         public void LogError(string tag, object message)
         {
-            _wrapper.Schedule(()=>_baseLogger.LogError(tag, message));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.LogError(tag, message)));
         }
 
         public void LogError(string tag, object message, Object context)
         {
-            _wrapper.Schedule(()=>_baseLogger.LogError(tag, message, context));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.LogError(tag, message, context)));
         }
 
         public void LogFormat(LogType logType, string format, params object[] args)
         {
-            _wrapper.Schedule(()=>_baseLogger.LogFormat(logType, format, args));
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.LogFormat(logType, format, args)));
         }
 
         public void LogException(Exception exception)
         {
-            ExceptionDispatchInfo dispatchInfo = ExceptionDispatchInfo.Capture(exception);
-            _wrapper.Schedule(() =>
-            {
-                try
-                {
-                    dispatchInfo.Throw();
-                }
-                catch (Exception ex)
-                {
-                    _baseLogger.LogException(ex);
-                }
-            });
+            _wrapper.Schedule(wrapCallback(() => _baseLogger.LogException(exception)));
         }
 
         public ILogHandler logHandler
@@ -139,6 +120,33 @@ namespace AsyncLoggers.Wrappers.Unity
         {
             get => _baseLogger.filterLogType; 
             set => _baseLogger.filterLogType = value;
+        }
+
+        private static IWrapper.LogCallback wrapCallback(Action callback)
+        {
+            var timestamp = GenericContext.Timestamp;
+            var uuid = LogContext.Uuid;
+            return () =>
+            {
+                try
+                {
+                    GenericContext.Async = true;
+                    GenericContext.Timestamp = timestamp;
+                    LogContext.Uuid = uuid;
+                    callback();
+                }
+                catch (Exception ex)
+                {
+                    AsyncLoggerPreloader.Log.LogError(
+                        $"Exception dispatching log to Unity: {ex}");
+                }
+                finally
+                {
+                    GenericContext.Async = false;
+                    GenericContext.Timestamp = null;
+                    LogContext.Uuid = null;
+                }
+            };
         }
     }
 }

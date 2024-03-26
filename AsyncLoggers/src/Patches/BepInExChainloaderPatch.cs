@@ -1,9 +1,7 @@
 ﻿using System;
-using System.Linq;
 using System.Reflection;
 using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.DBAPI;
-using AsyncLoggers.Wrappers.BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -25,7 +23,7 @@ namespace AsyncLoggers.Patches
                 if (SqliteLoggerImpl.Enabled)
                 {
                     AsyncLoggerPreloader.Log.LogWarning($"Adding Sqlite to BepInEx Listeners");
-                    BepInEx.Logging.Logger.Listeners.Add(new AsyncLogListenerWrapper(new SqliteListener()));
+                    BepInEx.Logging.Logger.Listeners.Add(new SqliteListener());
                 }
             }
             catch (Exception ex)
@@ -34,7 +32,7 @@ namespace AsyncLoggers.Patches
             }
         }
 
-        [HarmonyPostfix]
+        [HarmonyPrefix]
         [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Initialize))]
         private static void UseAsyncLogListeners()
         {
@@ -42,8 +40,6 @@ namespace AsyncLoggers.Patches
             {
                 SqliteLoggerImpl.WriteEvent("BepInEx", "Chainloader.Initialize", "Finished Initializing Chainloader");
                 
-                AsyncLoggerPreloader.Log.LogInfo(
-                    "using logMessageReceivedThreaded instead of logMessageReceived for UnityLogSource!!");
                 Application.LogCallback handler = UnityLogSource.OnUnityLogMessageReceived;
                 EventInfo eventInfo =
                     typeof(Application).GetEvent("logMessageReceived", BindingFlags.Static | BindingFlags.Public);
@@ -54,7 +50,8 @@ namespace AsyncLoggers.Patches
                     BindingFlags.Static | BindingFlags.Public);
                 if (eventInfo != null)
                     eventInfo.AddEventHandler(null, handler);
-
+                
+                /*
                 if (PluginConfig.BepInEx.Enabled.Value)
                 {
                     AsyncLoggerPreloader.Log.LogWarning("Converting BepInEx loggers to async!!");
@@ -79,7 +76,7 @@ namespace AsyncLoggers.Patches
                         collection.Remove(logger);
                         collection.Add(new AsyncLogListenerWrapper(logger));
                     }
-                }
+                }*/
             }
             catch (Exception ex)
             {

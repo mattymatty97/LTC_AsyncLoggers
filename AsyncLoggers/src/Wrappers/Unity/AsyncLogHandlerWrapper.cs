@@ -1,4 +1,5 @@
 ﻿using System;
+using AsyncLoggers.StaticContexts;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -24,13 +25,39 @@ namespace AsyncLoggers.Wrappers.Unity
 
         public void LogFormat(LogType logType, Object context, string format, params object[] args)
         {
-            _wrapper.Schedule(()=>_baseHandler.LogFormat(logType, context, format, args));
+            _wrapper.Schedule(wrapCallback(() => _baseHandler.LogFormat(logType, context, format, args)));
         }
         
         public void LogException(Exception exception, Object context)
         {
-            _wrapper.Schedule(() => _baseHandler.LogException(exception, context));
+            _wrapper.Schedule(wrapCallback(() => _baseHandler.LogException(exception, context)));
         }
 
+        private static IWrapper.LogCallback wrapCallback(Action callback)
+        {
+            var timestamp = GenericContext.Timestamp;
+            var uuid = LogContext.Uuid;
+            return () =>
+            {
+                try
+                {
+                    GenericContext.Async = true;
+                    GenericContext.Timestamp = timestamp;
+                    LogContext.Uuid = uuid;
+                    callback();
+                }
+                catch (Exception ex)
+                {
+                    AsyncLoggerPreloader.Log.LogError(
+                        $"Exception dispatching log to Unity: {ex}");
+                }
+                finally
+                {
+                    GenericContext.Async = false;
+                    GenericContext.Timestamp = null;
+                    LogContext.Uuid = null;
+                }
+            };
+        }
     }
 }

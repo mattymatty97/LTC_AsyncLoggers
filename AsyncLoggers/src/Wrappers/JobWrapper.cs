@@ -21,69 +21,27 @@ namespace AsyncLoggers.Wrappers
         private readonly LogJob _loggingJobStruct;
         private readonly ConcurrentCircularBuffer<IWrapper.LogCallback> _taskRingBuffer;
         private volatile RunCondition _shouldRun;
-        internal static IWrapper.ContextType ContextType { get; private set; }
 
-        public JobWrapper(IWrapper.ContextType contextType = IWrapper.ContextType.Log)
+        public JobWrapper()
         {
             var _id = Interlocked.Add(ref _IDSeed, 1);
             INSTANCES[_id] = this;
-            ContextType = contextType;
             _taskRingBuffer = new ConcurrentCircularBuffer<IWrapper.LogCallback>(PluginConfig.Scheduler.JobBufferSize.Value);
             DefaultCondition = ()=>_taskRingBuffer.Count > 0;
             _shouldRun = DefaultCondition;
             _loggingJobStruct = new LogJob(_id);
-        }
-
-        
-        private long getUUID()
-        {
-            return ContextType switch
-            {
-                IWrapper.ContextType.Log => LogContext.Uuid!.Value,
-                IWrapper.ContextType.Event => EventContext.Uuid!.Value,
-                _ => -1L
-            };
         }
         
         public void Schedule(IWrapper.LogCallback callback)
         {
             if (_shouldRun != DefaultCondition) 
                 return;
-            
-            var uuid = getUUID();
-            var timestamp = GenericContext.Timestamp;
 
-            _taskRingBuffer.Enqueue(CallbackWrapper);
+            _taskRingBuffer.Enqueue(callback);
 
             if (_loggingJob == null || _loggingJob.Value.IsCompleted )
             {
                 _loggingJob = _loggingJobStruct.Schedule();
-            }
-            
-            void CallbackWrapper()
-            {
-                try
-                {
-                    GenericContext.Async = true;
-                    GenericContext.Timestamp = timestamp;
-                    switch (ContextType)
-                    {
-                        case IWrapper.ContextType.Log:
-                            LogContext.Uuid = uuid;
-                            break;
-                        case IWrapper.ContextType.Event:
-                            EventContext.Uuid = uuid;
-                            break;
-                    }
-                    callback();
-                }
-                finally
-                {
-                    GenericContext.Async = false;
-                    GenericContext.Timestamp = null;
-                    LogContext.Uuid = null;
-                    EventContext.Uuid = null;
-                }
             }
         }
 

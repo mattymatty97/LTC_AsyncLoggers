@@ -7,11 +7,5 @@
         public void Schedule(LogCallback callback);
 
         public void Stop(bool immediate = false);
-        
-        public enum ContextType
-        {
-            Log,
-            Event
-        }
     }
 }

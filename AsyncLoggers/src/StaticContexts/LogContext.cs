@@ -13,7 +13,7 @@ namespace AsyncLoggers.StaticContexts
 
         public static long? Uuid
         {
-            get => _UUID ?? Interlocked.Increment(ref logCounter);
+            get => _UUID ?? (GenericContext.PreChainloader?0L:Interlocked.Increment(ref logCounter));
             set => _UUID = value;
         }
     }

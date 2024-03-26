@@ -4,6 +4,8 @@ namespace AsyncLoggers.StaticContexts
 {
     public class GenericContext
     {
+        internal static bool PreChainloader { get; set; } = true;
+        
         [ThreadStatic]
         private static bool _async;
 
