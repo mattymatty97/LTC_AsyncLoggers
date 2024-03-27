@@ -11,10 +11,6 @@ namespace AsyncLoggers.Patches
     [HarmonyPatch]
     internal class BepInExLoggerPatcher
     {
-        private static readonly ConcurrentDictionary<ILogListener, IWrapper> _wrappersMap =
-            new ConcurrentDictionary<ILogListener, IWrapper>();
-
-        
         [HarmonyPrefix]
         [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Initialize))]
         private static void OnInitialize()
@@ -29,8 +25,7 @@ namespace AsyncLoggers.Patches
             if (!PluginConfig.BepInEx.Enabled.Value)
                 return true;
             
-            var async = GenericContext.Async;
-            if (async || GenericContext.PreChainloader)
+            if (GenericContext.PreChainloader)
                 return true;
             
             var uuid = LogContext.Uuid!.Value;
@@ -38,7 +33,7 @@ namespace AsyncLoggers.Patches
 
             foreach (ILogListener listener in Logger.Listeners)
             {
-                var wrapper = _wrappersMap.GetOrAdd(listener, (l) => PluginConfig.BepInEx.Scheduler.Value switch
+                var wrapper = GenericContext._wrappersMap.GetOrAdd(listener, (l) => PluginConfig.BepInEx.Scheduler.Value switch
                 {
                     PluginConfig.AsyncType.Thread => new ThreadWrapper(),
                     PluginConfig.AsyncType.Job => new JobWrapper(),

@@ -16,12 +16,16 @@ namespace AsyncLoggers
 {
     public static class AsyncLoggerPreloader
     {
+        public const string GUID = "mattymatty.AsyncLoggers";
+        public const string NAME = "AsyncLoggers";
+        public const string VERSION = "1.6.0";
         internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
         private static Harmony _harmony;
 
         private static int startTime;
-        
-        public static IEnumerable<string> TargetDLLs { get; } = new string[]{"UnityEngine.CoreModule.dll"};
+
+        public static IEnumerable<string> TargetDLLs { get; } = new string[] { "UnityEngine.CoreModule.dll" };
+
         public static void Patch(AssemblyDefinition assembly)
         {
             if (assembly.Name.Name == "UnityEngine.CoreModule")
@@ -40,11 +44,12 @@ namespace AsyncLoggers
         public static void Initialize()
         {
             PluginConfig.Init();
-            Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Started");
-            
+            Log.LogInfo($"{NAME} Prepatcher Started");
+
             startTime = Environment.TickCount & Int32.MaxValue;
             if (PluginConfig.Timestamps.Enabled.Value)
-                Log.LogWarning($"{AsyncLoggers.NAME} Timestamps start at {DateTime.UtcNow.ToString("dddd, dd MMMM yyyy HH:mm:ss.fffffff")} UTC");
+                Log.LogWarning(
+                    $"{NAME} Timestamps start at {DateTime.UtcNow.ToString("dddd, dd MMMM yyyy HH:mm:ss.fffffff")} UTC");
             switch (PluginConfig.Timestamps.Type.Value)
             {
                 case PluginConfig.TimestampType.DateTime:
@@ -69,33 +74,36 @@ namespace AsyncLoggers
                     };
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException($"{PluginConfig.Timestamps.Type.Value} is not a valid TimestampType");
+                    throw new ArgumentOutOfRangeException(
+                        $"{PluginConfig.Timestamps.Type.Value} is not a valid TimestampType");
             }
         }
-        
+
         // Cannot be renamed, method name is important
         public static void Finish()
         {
             SqliteLoggerImpl.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
-            _harmony = new Harmony(AsyncLoggers.GUID);
+            _harmony = new Harmony(GUID);
             _harmony.PatchAll(typeof(BepInExLogEventArgsPatch));
             _harmony.PatchAll(typeof(BepInExChainloaderPatch));
             _harmony.PatchAll(typeof(BepInExLoggerPatcher));
-            Log.LogInfo($"{AsyncLoggers.NAME} Prepatcher Finished");
+            Log.LogInfo($"{NAME} Prepatcher Finished");
         }
 
         internal static Func<object> GetLogTimestamp;
-        
+
         internal static void OnApplicationQuit()
         {
             foreach (var jobWrapper in JobWrapper.INSTANCES.Values)
             {
                 jobWrapper.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
             }
+
             foreach (var threadWrapper in ThreadWrapper._wrappers)
             {
                 threadWrapper?.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
             }
+
             SqliteLoggerImpl.Terminate(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
         }
     }

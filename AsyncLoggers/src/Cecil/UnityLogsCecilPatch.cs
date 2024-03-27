@@ -22,9 +22,9 @@ namespace AsyncLoggers.Cecil
                             .GetConstructors();
 
                         var asyncLoggerConstructor =
-                            typeof(WrapperWrapper).GetMethod(nameof(WrapperWrapper.WrapUnityLogger));
+                            typeof(ProxyClass).GetMethod(nameof(ProxyClass.WrapUnityLogger));
                         var asyncLogHandlerConstructor =
-                            typeof(WrapperWrapper).GetMethod(nameof(WrapperWrapper.WrapUnityLogHandler));
+                            typeof(ProxyClass).GetMethod(nameof(ProxyClass.WrapUnityLogHandler));
                         MethodReference asyncConstructor;
                         IEnumerable<MethodReference> ogConstructors;
 

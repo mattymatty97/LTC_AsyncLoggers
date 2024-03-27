@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace AsyncLoggers.Cecil
 {
-    internal class WrapperWrapper
+    internal class ProxyClass
     {
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         public static object WrapUnityLogger(object _base)
@@ -17,6 +17,12 @@ namespace AsyncLoggers.Cecil
         public static object WrapUnityLogHandler(object _base)
         {
             return new AsyncLogHandlerWrapper((ILogHandler)_base);
+        }
+        
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
+        public static void AppendQuittingCallback()
+        {
+            Application.quitting += AsyncLoggerPreloader.OnApplicationQuit;
         }
         
     }

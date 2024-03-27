@@ -31,7 +31,7 @@ using System;
 using System.Runtime.CompilerServices;
 using AsyncLoggers.DBAPI;
 
-public class AsyncLoggerProxy
+public static class AsyncLoggerProxy
 {        
     private static bool? _enabled;
     public static bool Enabled
@@ -40,16 +40,15 @@ public class AsyncLoggerProxy
         {
             if (_enabled.HasValue)
                 return _enabled.Value;
-            if (BepInEx.Bootstrap.Chainloader.PluginInfos.TryGetValue("mattymatty.AsyncLoggers", out var pluginInfo))
+            try
             {
-                if (pluginInfo.Metadata.Version >= new Version(1, 6, 0))
-                {
-                    _enabled = true;
-                    return true;
-                }
+                _enabled = isDbEnabled();
+            }catch (Exception)            
+            {                
+                _enabled = false;
+                return false;
             }
-            _enabled = false;
-            return false;
+            return _enabled.Value;
         }
     }
     

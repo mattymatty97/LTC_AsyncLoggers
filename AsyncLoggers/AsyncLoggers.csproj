@@ -44,14 +44,12 @@
     </ItemGroup>
     <ItemGroup>
         <Compile Include="src\AsyncLoggerPreloader.cs" />
-        <Compile Include="src\AsyncLoggers.cs" />
         <Compile Include="src\BepInExListeners\SqliteListener.cs" />
         <Compile Include="src\BepInExListeners\TsvListener.cs" />
         <Compile Include="src\Cecil\UnityLogsCecilPatch.cs" />
-        <Compile Include="src\Cecil\WrapperWrapper.cs" />
+        <Compile Include="src\Cecil\ProxyClass.cs" />
         <Compile Include="src\DBAPI\SqliteLogger.cs" />
         <Compile Include="src\DBAPI\SqliteLoggerImpl.cs" />
-        <Compile Include="src\Dependency\LobbyCompatibilityProxy.cs" />
         <Compile Include="src\DisruptorUnity3d\AltRingBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\ConcurrentCircularBuffer.cs" />
         <Compile Include="src\DisruptorUnity3d\RingBuffer.cs" />

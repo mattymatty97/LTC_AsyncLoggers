@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Reflection;
 using AsyncLoggers.BepInExListeners;
+using AsyncLoggers.Cecil;
 using AsyncLoggers.DBAPI;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
@@ -25,6 +26,7 @@ namespace AsyncLoggers.Patches
                     AsyncLoggerPreloader.Log.LogWarning($"Adding Sqlite to BepInEx Listeners");
                     BepInEx.Logging.Logger.Listeners.Add(new SqliteListener());
                 }
+                ProxyClass.AppendQuittingCallback();
             }
             catch (Exception ex)
             {

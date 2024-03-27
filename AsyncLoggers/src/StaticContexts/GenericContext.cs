@@ -1,10 +1,16 @@
 ﻿using System;
+using System.Collections.Concurrent;
+using AsyncLoggers.Wrappers;
+using BepInEx.Logging;
 
 namespace AsyncLoggers.StaticContexts
 {
     public class GenericContext
     {
         internal static bool PreChainloader { get; set; } = true;
+        
+        internal static readonly ConcurrentDictionary<ILogListener, IWrapper> _wrappersMap =
+            new ConcurrentDictionary<ILogListener, IWrapper>();
         
         [ThreadStatic]
         private static bool _async;
@@ -33,5 +39,6 @@ namespace AsyncLoggers.StaticContexts
         {
             return timestamp?.ToString("MM/dd/yyyy HH:mm:ss.fffffff");
         }
+
     }
 }

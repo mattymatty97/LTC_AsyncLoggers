@@ -5,10 +5,10 @@ using AsyncLoggers;
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle(AsyncLoggers.AsyncLoggers.NAME)]
+[assembly: AssemblyTitle(AsyncLoggers.AsyncLoggerPreloader.NAME)]
 [assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyProduct(AsyncLoggers.AsyncLoggers.NAME)]
+[assembly: AssemblyProduct(AsyncLoggers.AsyncLoggerPreloader.NAME)]
 [assembly: AssemblyCopyright("Copyright © mattymatty 2024")]
 [assembly: AssemblyCulture("")]
 
@@ -27,5 +27,5 @@ using AsyncLoggers;
 // You can specify all the values or you can default the Build and Revision Numbers 
 // by using the '*' as shown below:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion(AsyncLoggers.AsyncLoggers.VERSION)]
-[assembly: AssemblyFileVersion(AsyncLoggers.AsyncLoggers.VERSION)]
+[assembly: AssemblyVersion(AsyncLoggers.AsyncLoggerPreloader.VERSION)]
+[assembly: AssemblyFileVersion(AsyncLoggers.AsyncLoggerPreloader.VERSION)]
