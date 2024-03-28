@@ -56,6 +56,7 @@ namespace AsyncLoggers.DBAPI
                 Connection.CreateTable<Tables.Executions>(CreateFlags.AutoIncPK);
                 Connection.CreateTable<Tables.Mods>(CreateFlags.AutoIncPK);
                 Connection.CreateTable<Tables.Events>(CreateFlags.AutoIncPK);
+                Connection.CreateTable<Tables.ModData>(CreateFlags.AutoIncPK);
 
                 ExecutionId = GetExecution();
 

@@ -47,6 +47,12 @@ namespace AsyncLoggers.Patches
                         GenericContext.Async = true;
                         GenericContext.Timestamp = timestamp;
                         LogContext.Uuid = uuid;
+                                    
+                        if (PluginConfig.Timestamps.Enabled.Value)
+                        {
+                            BepInExLogEventArgsPatch.CONTEXTS.GetOrCreateValue(eventArgs).Timestamp = AsyncLoggerPreloader.GetLogTimestamp().ToString();
+                        }
+                        
                         listener?.LogEvent(sender, eventArgs);
                     }
                     catch (Exception ex)
