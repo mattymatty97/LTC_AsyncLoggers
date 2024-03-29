@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using AsyncLoggers.StaticContexts;
 using DisruptorUnity3d;
 using Unity.Jobs;
 using UnityEngine;
@@ -85,12 +84,13 @@ namespace AsyncLoggers.Wrappers
                             task?.Invoke();
                         }
                     }
-                    catch (ThreadInterruptedException)
-                    {
-                        _shouldRun = () => false;
-                    }
                     catch (Exception ex)
                     {
+                        if (ex is ThreadInterruptedException || ex is ThreadAbortException)
+                        {
+                            _shouldRun = () => false;
+                            break;
+                        }
                         try
                         {
                             AsyncLoggerPreloader.Log.LogError($"Exception while logging: {ex}");
@@ -104,6 +104,11 @@ namespace AsyncLoggers.Wrappers
             }
             catch (Exception ex)
             {
+                if (ex is ThreadInterruptedException || ex is ThreadAbortException)
+                {
+                    _shouldRun = () => false;
+                    return;
+                }
                 try
                 {
                     AsyncLoggerPreloader.Log.LogError($"Bad Exception while logging: {ex}");}

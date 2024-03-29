@@ -45,12 +45,13 @@ namespace AsyncLoggers.Wrappers
                             task?.Invoke();
                         }
                     }
-                    catch (ThreadInterruptedException)
-                    {
-                        _shouldRun = () => false;
-                    }
                     catch (Exception ex)
                     {
+                        if (ex is ThreadInterruptedException || ex is ThreadAbortException)
+                        {
+                            _shouldRun = () => false;
+                            break;
+                        }
                         try
                         {
                             AsyncLoggerPreloader.Log.LogError($"Exception while logging: {ex}");
@@ -64,12 +65,17 @@ namespace AsyncLoggers.Wrappers
             }
             catch (Exception ex)
             {
+                if (ex is ThreadInterruptedException || ex is ThreadAbortException)
+                {
+                    _shouldRun = () => false;
+                    return;
+                }
                 try
                 {
                     AsyncLoggerPreloader.Log.LogError($"Bad Exception while logging: {ex}");}
                 catch (Exception)
                 {
-                    Console.WriteLine($"Exception while logging: {ex}");
+                    Console.WriteLine($"Bad Exception while logging: {ex}");
                 }
             }
         }

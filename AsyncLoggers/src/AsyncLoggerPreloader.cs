@@ -18,7 +18,7 @@ namespace AsyncLoggers
     {
         public const string GUID = "mattymatty.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
-        public const string VERSION = "1.6.0";
+        public const string VERSION = "1.6.1";
         internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
         private static Harmony _harmony;
 
