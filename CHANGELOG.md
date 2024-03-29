@@ -1,3 +1,6 @@
+# v1.6.1
+- fix errors during shutdown
+
 # v1.6.0
 - added Mods table to SqliteDb
 - added Events table to SqliteDb
