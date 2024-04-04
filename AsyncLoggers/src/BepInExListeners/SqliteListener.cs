@@ -1,4 +1,6 @@
-﻿using AsyncLoggers.DBAPI;
+﻿using System;
+using System.Globalization;
+using AsyncLoggers.DBAPI;
 using AsyncLoggers.StaticContexts;
 using BepInEx.Logging;
 using SQLite;
@@ -25,12 +27,21 @@ namespace AsyncLoggers.BepInExListeners
             {
                 execution_id = SqliteLoggerImpl.ExecutionId,
                 UUID = (int)LogContext.Uuid!,
-                timestamp = GenericContext.FormatTimestamp(GenericContext.Timestamp),
+                timestamp = GenericContext.Timestamp?.ToString("o", CultureInfo.InvariantCulture),
                 source = eventArgs.Source.SourceName,
                 level = eventArgs.Level.ToString(),
                 message = eventArgs.Data?.ToString()
             };
-            SqliteLoggerImpl.Connection.Insert(log);
+            try
+            {
+                SqliteLoggerImpl.Connection.Insert(log);
+            }
+            catch (Exception ex)
+            {
+                AsyncLoggerPreloader.Log.LogError(
+                    $"Exception writing log to db [{log.level} {log.source}]: {ex}");
+                SqliteLoggerImpl.Enabled = false;
+            }
         }
         
         internal static class Tables

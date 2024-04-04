@@ -1,3 +1,8 @@
+# v1.6.2
+- fix Database rolling failing after 1 cycle
+- fix NRE during app closing if Database is disabled
+- add more try/catches to prevent unwanted exceptions from propagating
+
 # v1.6.1
 - fix errors during shutdown
 

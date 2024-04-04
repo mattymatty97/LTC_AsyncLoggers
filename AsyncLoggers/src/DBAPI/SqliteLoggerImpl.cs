@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
 using AsyncLoggers.StaticContexts;
@@ -12,7 +13,8 @@ namespace AsyncLoggers.DBAPI
 {
     public static class SqliteChecker
     {
-        internal static bool isLoaded() {
+        internal static bool isLoaded()
+        {
             try
             {
                 SQLite3.LibVersionNumber();
@@ -24,12 +26,12 @@ namespace AsyncLoggers.DBAPI
             }
         }
     }
-    
+
     internal static class SqliteLoggerImpl
     {
         private static IWrapper asyncScheduler;
 
-        internal static bool Enabled { get; private set; }
+        internal static bool Enabled { get; set; }
 
         internal static SQLiteConnection Connection { get; private set; }
         internal static int ExecutionId { get; private set; }
@@ -37,41 +39,64 @@ namespace AsyncLoggers.DBAPI
         internal static void Init(string outputFile)
         {
             Enabled = PluginConfig.DbLogger.Enabled.Value && SqliteChecker.isLoaded();
-            if (Enabled)
+            if (PluginConfig.DbLogger.Enabled.Value)
             {
-                AsyncLoggerPreloader.Log.LogDebug($"creating db");
-                if (File.Exists(outputFile))
+                try
                 {
-                    var filesize = new FileInfo(outputFile).Length;
-                    AsyncLoggerPreloader.Log.LogDebug($"db existed and was {filesize} bytes");
-                    if (filesize > PluginConfig.DbLogger.RotationSize.Value)
+                    if (SqliteChecker.isLoaded())
                     {
-                        AsyncLoggerPreloader.Log.LogWarning($"rotating db file");
-                        File.Move(outputFile, outputFile + ".1");
+                        AsyncLoggerPreloader.Log.LogDebug($"creating db");
+                        try
+                        {
+                            if (File.Exists(outputFile))
+                            {
+                                var filesize = new FileInfo(outputFile).Length;
+                                AsyncLoggerPreloader.Log.LogDebug($"db existed and was {filesize} bytes");
+                                if (filesize > PluginConfig.DbLogger.RotationSize.Value)
+                                {
+                                    AsyncLoggerPreloader.Log.LogWarning($"rotating db file");
+                                    var rotationFile = outputFile + ".1";
+                                    if (File.Exists(rotationFile))
+                                        File.Delete(rotationFile);
+                                    File.Move(outputFile, rotationFile);
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            AsyncLoggerPreloader.Log.LogError($"Exception while rotating files! {ex}");
+                            AsyncLoggerPreloader.Log.LogWarning($"Db defaulted to append mode");
+                        }
+
+                        Connection = new SQLiteConnection(outputFile);
+
+                        Connection.CreateTable<Tables.Executions>(CreateFlags.AutoIncPK);
+                        Connection.CreateTable<Tables.Mods>(CreateFlags.AutoIncPK);
+                        Connection.CreateTable<Tables.Events>(CreateFlags.AutoIncPK);
+                        Connection.CreateTable<Tables.ModData>(CreateFlags.AutoIncPK);
+
+                        ExecutionId = GetExecution();
+
+                        AsyncLoggerPreloader.Log.LogDebug($"ExecutionID is {ExecutionId}");
+
+                        Connection.Insert(new Tables.Events
+                        {
+                            execution_id = ExecutionId,
+                            UUID = (int)EventContext.Uuid!,
+                            timestamp = GenericContext.FormatTimestamp(Process.GetCurrentProcess().StartTime
+                                .ToUniversalTime()),
+                            source = "Application",
+                            tag = "Start",
+                            data = "Process Started"
+                        });
+                        asyncScheduler = new ThreadWrapper();
                     }
                 }
-
-                Connection = new SQLiteConnection(outputFile);
-
-                Connection.CreateTable<Tables.Executions>(CreateFlags.AutoIncPK);
-                Connection.CreateTable<Tables.Mods>(CreateFlags.AutoIncPK);
-                Connection.CreateTable<Tables.Events>(CreateFlags.AutoIncPK);
-                Connection.CreateTable<Tables.ModData>(CreateFlags.AutoIncPK);
-
-                ExecutionId = GetExecution();
-
-                AsyncLoggerPreloader.Log.LogDebug($"ExecutionID is {ExecutionId}");
-
-                Connection.Insert(new Tables.Events
+                catch (Exception ex)
                 {
-                    execution_id = ExecutionId,
-                    UUID = (int)EventContext.Uuid!,
-                    timestamp = GenericContext.FormatTimestamp(Process.GetCurrentProcess().StartTime.ToUniversalTime()),
-                    source = "Application",
-                    tag = "Start",
-                    data = "Process Started"
-                });
-                asyncScheduler = new ThreadWrapper();
+                    AsyncLoggerPreloader.Log.LogError($"Exception while initializing the database! {ex}");
+                    Enabled = false;
+                }
             }
             else
             {
@@ -81,8 +106,19 @@ namespace AsyncLoggers.DBAPI
 
         internal static void Terminate(bool immediate)
         {
+            if (Enabled)
+            {
+                try
+                {
+                    _WriteEvent("Application", "Quitting", "Stopping Process");
+                }
+                catch (Exception)
+                {
+                    //ignored
+                }
+            }
             Enabled = false;
-            asyncScheduler.Stop(immediate);
+            asyncScheduler?.Stop(immediate);
         }
 
         internal static void WriteEvent(string source, string tag, string data, DateTime? timestamp = null)
@@ -104,7 +140,9 @@ namespace AsyncLoggers.DBAPI
                     {
                         AsyncLoggerPreloader.Log.LogError(
                             $"Exception writing event {source}/{tag}: {ex}");
-                    }finally
+                        Enabled = false;
+                    }
+                    finally
                     {
                         GenericContext.Async = false;
                         GenericContext.Timestamp = null;
@@ -113,23 +151,25 @@ namespace AsyncLoggers.DBAPI
                 });
             }
         }
-        
+
         private static void _WriteEvent(string source, string tag, string data)
         {
             var value = new Tables.Events
             {
                 execution_id = ExecutionId,
                 UUID = (int)EventContext.Uuid!,
-                timestamp = GenericContext.FormatTimestamp(GenericContext.Timestamp),
+                timestamp = GenericContext.Timestamp?.ToString("o", CultureInfo.InvariantCulture),
                 source = source,
                 tag = tag,
                 data = data
             };
             Connection.Insert(value);
-            
-            Task.Factory.StartNew(()=>SqliteLogger.onEventWritten(value.UUID,value.source,value.tag,value.data, GenericContext.Timestamp!.Value));
+
+            Task.Factory.StartNew(() =>
+                SqliteLogger.onEventWritten(value.UUID, value.source, value.tag, value.data,
+                    GenericContext.Timestamp!.Value));
         }
-        
+
         internal static void WriteData(string source, string tag, string data, DateTime? timestamp = null)
         {
             if (Enabled)
@@ -148,7 +188,9 @@ namespace AsyncLoggers.DBAPI
                     {
                         AsyncLoggerPreloader.Log.LogError(
                             $"Exception writing data {source}/{tag}: {ex}");
-                    }finally
+                        Enabled = false;
+                    }
+                    finally
                     {
                         GenericContext.Async = false;
                         GenericContext.Timestamp = null;
@@ -157,33 +199,32 @@ namespace AsyncLoggers.DBAPI
                 });
             }
         }
-        
+
         private static void _WriteData(string source, string tag, string data)
         {
-
             var value = new Tables.ModData()
             {
                 execution_id = ExecutionId,
-                timestamp = GenericContext.FormatTimestamp(GenericContext.Timestamp),
+                timestamp = GenericContext.Timestamp?.ToString("o", CultureInfo.InvariantCulture),
                 source = source,
                 tag = tag,
                 data = data
             };
-            
-            Connection.Insert(value);
-            
-            Task.Factory.StartNew(()=>SqliteLogger.onDataWritten(value.source,value.tag,value.data,GenericContext.Timestamp!.Value));
 
+            Connection.Insert(value);
+
+            Task.Factory.StartNew(() =>
+                SqliteLogger.onDataWritten(value.source, value.tag, value.data, GenericContext.Timestamp!.Value));
         }
-        
+
         internal static void WriteMods(IEnumerable<PluginInfo> loadedMods)
         {
             if (Enabled)
             {
-                Task.Factory.StartNew(()=>_WriteMods(loadedMods));
+                Task.Factory.StartNew(() => _WriteMods(loadedMods));
             }
         }
-        
+
         private static void _WriteMods(IEnumerable<PluginInfo> loadedMods)
         {
             foreach (var pluginInfo in loadedMods)
@@ -211,33 +252,30 @@ namespace AsyncLoggers.DBAPI
             {
                 [PrimaryKey, AutoIncrement] public int _id { get; set; }
             }
-            
+
             public class Mods
             {
-                [PrimaryKey, AutoIncrement] 
-                public int _id { get; set; }
+                [PrimaryKey, AutoIncrement] public int _id { get; set; }
                 public int execution_id { get; set; }
                 public string modID { get; set; }
                 public string modName { get; set; }
                 public string modVersion { get; set; }
             }
-            
+
             public class Events
             {
-                [PrimaryKey, AutoIncrement] 
-                public int _id { get; set; }
+                [PrimaryKey, AutoIncrement] public int _id { get; set; }
                 public int execution_id { get; set; }
                 public int UUID { get; set; }
                 public string timestamp { get; set; }
                 public string source { get; set; }
                 public string tag { get; set; }
                 public string data { get; set; }
-            }            
-            
+            }
+
             public class ModData
             {
-                [PrimaryKey, AutoIncrement] 
-                public int _id { get; set; }
+                [PrimaryKey, AutoIncrement] public int _id { get; set; }
                 public int execution_id { get; set; }
                 public string timestamp { get; set; }
                 public string source { get; set; }
