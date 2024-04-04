@@ -38,7 +38,7 @@ namespace AsyncLoggers.BepInExListeners
             }
             catch (Exception ex)
             {
-                AsyncLoggerPreloader.Log.LogError(
+                AsyncLoggers.Log.LogError(
                     $"Exception writing log to db [{log.level} {log.source}]: {ex}");
                 SqliteLoggerImpl.Enabled = false;
             }

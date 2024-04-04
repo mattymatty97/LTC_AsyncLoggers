@@ -14,7 +14,7 @@ using Logger = BepInEx.Logging.Logger;
 
 namespace AsyncLoggers
 {
-    public static class AsyncLoggerPreloader
+    public static class AsyncLoggers
     {
         public const string GUID = "mattymatty.AsyncLoggers";
         public const string NAME = "AsyncLoggers";
@@ -105,6 +105,11 @@ namespace AsyncLoggers
             }
 
             SqliteLoggerImpl.Terminate(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
+        }
+
+        public static void RegisterIgnoredILogListener(ILogListener toIgnore)
+        {
+            GenericContext._wrappersMap[toIgnore] = null;
         }
     }
 }

@@ -45,16 +45,16 @@ namespace AsyncLoggers.DBAPI
                 {
                     if (SqliteChecker.isLoaded())
                     {
-                        AsyncLoggerPreloader.Log.LogDebug($"creating db");
+                        AsyncLoggers.Log.LogDebug($"creating db");
                         try
                         {
                             if (File.Exists(outputFile))
                             {
                                 var filesize = new FileInfo(outputFile).Length;
-                                AsyncLoggerPreloader.Log.LogDebug($"db existed and was {filesize} bytes");
+                                AsyncLoggers.Log.LogDebug($"db existed and was {filesize} bytes");
                                 if (filesize > PluginConfig.DbLogger.RotationSize.Value)
                                 {
-                                    AsyncLoggerPreloader.Log.LogWarning($"rotating db file");
+                                    AsyncLoggers.Log.LogWarning($"rotating db file");
                                     var rotationFile = outputFile + ".1";
                                     if (File.Exists(rotationFile))
                                         File.Delete(rotationFile);
@@ -64,8 +64,8 @@ namespace AsyncLoggers.DBAPI
                         }
                         catch (Exception ex)
                         {
-                            AsyncLoggerPreloader.Log.LogError($"Exception while rotating files! {ex}");
-                            AsyncLoggerPreloader.Log.LogWarning($"Db defaulted to append mode");
+                            AsyncLoggers.Log.LogError($"Exception while rotating files! {ex}");
+                            AsyncLoggers.Log.LogWarning($"Db defaulted to append mode");
                         }
 
                         Connection = new SQLiteConnection(outputFile);
@@ -77,7 +77,7 @@ namespace AsyncLoggers.DBAPI
 
                         ExecutionId = GetExecution();
 
-                        AsyncLoggerPreloader.Log.LogDebug($"ExecutionID is {ExecutionId}");
+                        AsyncLoggers.Log.LogDebug($"ExecutionID is {ExecutionId}");
 
                         Connection.Insert(new Tables.Events
                         {
@@ -94,13 +94,13 @@ namespace AsyncLoggers.DBAPI
                 }
                 catch (Exception ex)
                 {
-                    AsyncLoggerPreloader.Log.LogError($"Exception while initializing the database! {ex}");
+                    AsyncLoggers.Log.LogError($"Exception while initializing the database! {ex}");
                     Enabled = false;
                 }
             }
             else
             {
-                AsyncLoggerPreloader.Log.LogError($"No Sqlite dll found disabling Database!");
+                AsyncLoggers.Log.LogError($"No Sqlite dll found disabling Database!");
             }
         }
 
@@ -138,7 +138,7 @@ namespace AsyncLoggers.DBAPI
                     }
                     catch (Exception ex)
                     {
-                        AsyncLoggerPreloader.Log.LogError(
+                        AsyncLoggers.Log.LogError(
                             $"Exception writing event {source}/{tag}: {ex}");
                         Enabled = false;
                     }
@@ -186,7 +186,7 @@ namespace AsyncLoggers.DBAPI
                     }
                     catch (Exception ex)
                     {
-                        AsyncLoggerPreloader.Log.LogError(
+                        AsyncLoggers.Log.LogError(
                             $"Exception writing data {source}/{tag}: {ex}");
                         Enabled = false;
                     }

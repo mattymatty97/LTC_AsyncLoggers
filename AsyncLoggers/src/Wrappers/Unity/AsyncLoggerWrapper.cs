@@ -137,7 +137,7 @@ namespace AsyncLoggers.Wrappers.Unity
                 }
                 catch (Exception ex)
                 {
-                    AsyncLoggerPreloader.Log.LogError(
+                    AsyncLoggers.Log.LogError(
                         $"Exception dispatching log to Unity: {ex}");
                 }
                 finally

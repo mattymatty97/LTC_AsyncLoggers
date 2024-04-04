@@ -51,7 +51,7 @@ namespace AsyncLoggers.Cecil
                             {
                                 processor.InsertAfter(curr, newAsyncLine);
                                 i++;
-                                AsyncLoggerPreloader.Log.LogDebug("Forcing Unity LogHandler to Async!!");
+                                AsyncLoggers.Log.LogDebug("Forcing Unity LogHandler to Async!!");
                             }
                         }
                     }

@@ -22,7 +22,7 @@ namespace AsyncLoggers.Cecil
         [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         public static void AppendQuittingCallback()
         {
-            Application.quitting += AsyncLoggerPreloader.OnApplicationQuit;
+            Application.quitting += AsyncLoggers.OnApplicationQuit;
         }
         
     }

@@ -10,7 +10,7 @@ namespace AsyncLoggers
     {
         public static void Init()
         {
-            var config = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggerPreloader.NAME + ".cfg"), true);
+            var config = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME + ".cfg"), true);
             //Initialize Configs
             //Timestamps
             Timestamps.Enabled = config.Bind("Timestamps","enabled",true

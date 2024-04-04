@@ -33,43 +33,50 @@ namespace AsyncLoggers.Patches
 
             foreach (ILogListener listener in Logger.Listeners)
             {
-                var wrapper = GenericContext._wrappersMap.GetOrAdd(listener, (l) => PluginConfig.BepInEx.Scheduler.Value switch
+                var wrapper = GenericContext._wrappersMap.GetOrAdd(listener, l => PluginConfig.BepInEx.Scheduler.Value switch
                 {
                     PluginConfig.AsyncType.Thread => new ThreadWrapper(),
                     PluginConfig.AsyncType.Job => new JobWrapper(),
-                    _ => throw new ArgumentOutOfRangeException()
+                    _ => null
                 });
                 
-                wrapper.Schedule(() =>
+                if (wrapper != null)
+                    wrapper.Schedule(() => ProcessLogEvent(listener));
+                else
                 {
-                    try
-                    {
-                        GenericContext.Async = true;
-                        GenericContext.Timestamp = timestamp;
-                        LogContext.Uuid = uuid;
-                                    
-                        if (PluginConfig.Timestamps.Enabled.Value)
-                        {
-                            BepInExLogEventArgsPatch.CONTEXTS.GetOrCreateValue(eventArgs).Timestamp = AsyncLoggerPreloader.GetLogTimestamp().ToString();
-                        }
-                        
-                        listener?.LogEvent(sender, eventArgs);
-                    }
-                    catch (Exception ex)
-                    {
-                        AsyncLoggerPreloader.Log.LogError(
-                            $"Exception dispatching log to {listener!.GetType().Name}: {ex}");
-                    }
-                    finally
-                    {
-                        GenericContext.Async = false;
-                        GenericContext.Timestamp = null;
-                        LogContext.Uuid = null;
-                    }
-                });
+                    ProcessLogEvent(listener);
+                }
             }
             
             return false;
+
+            void ProcessLogEvent(ILogListener listener)
+            {
+                try
+                {
+                    GenericContext.Async = true;
+                    GenericContext.Timestamp = timestamp;
+                    LogContext.Uuid = uuid;
+                                        
+                    if (PluginConfig.Timestamps.Enabled.Value)
+                    {
+                        BepInExLogEventArgsPatch.CONTEXTS.GetOrCreateValue(eventArgs).Timestamp = AsyncLoggers.GetLogTimestamp().ToString();
+                    }
+                            
+                    listener?.LogEvent(sender, eventArgs);
+                }
+                catch (Exception ex)
+                {
+                    AsyncLoggers.Log.LogError(
+                        $"Exception dispatching log to {listener!.GetType().Name}: {ex}");
+                }
+                finally
+                {
+                    GenericContext.Async = false;
+                    GenericContext.Timestamp = null;
+                    LogContext.Uuid = null;
+                }
+            }
         }
     }
 }

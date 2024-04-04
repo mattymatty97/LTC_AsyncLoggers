@@ -54,7 +54,7 @@ namespace AsyncLoggers.Wrappers
                         }
                         try
                         {
-                            AsyncLoggerPreloader.Log.LogError($"Exception while logging: {ex}");
+                            AsyncLoggers.Log.LogError($"Exception while logging: {ex}");
                         }
                         catch (Exception)
                         {
@@ -72,7 +72,7 @@ namespace AsyncLoggers.Wrappers
                 }
                 try
                 {
-                    AsyncLoggerPreloader.Log.LogError($"Bad Exception while logging: {ex}");}
+                    AsyncLoggers.Log.LogError($"Bad Exception while logging: {ex}");}
                 catch (Exception)
                 {
                     Console.WriteLine($"Bad Exception while logging: {ex}");

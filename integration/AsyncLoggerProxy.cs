@@ -33,6 +33,7 @@ using AsyncLoggers.DBAPI;
 
 public static class AsyncLoggerProxy
 {        
+    
     private static bool? _enabled;
     public static bool Enabled
     {

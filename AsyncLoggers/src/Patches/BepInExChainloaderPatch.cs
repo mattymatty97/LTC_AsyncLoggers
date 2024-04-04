@@ -23,14 +23,14 @@ namespace AsyncLoggers.Patches
                 SqliteLoggerImpl.WriteEvent("BepInEx","Chainloader.Initialize", "Initializing Chainloader");
                 if (SqliteLoggerImpl.Enabled)
                 {
-                    AsyncLoggerPreloader.Log.LogWarning($"Adding Sqlite to BepInEx Listeners");
+                    AsyncLoggers.Log.LogWarning($"Adding Sqlite to BepInEx Listeners");
                     BepInEx.Logging.Logger.Listeners.Add(new SqliteListener());
                 }
                 ProxyClass.AppendQuittingCallback();
             }
             catch (Exception ex)
             {
-                AsyncLoggerPreloader.Log.LogError($"Exception starting {ex}");
+                AsyncLoggers.Log.LogError($"Exception starting {ex}");
             }
         }
 
@@ -82,7 +82,7 @@ namespace AsyncLoggers.Patches
             }
             catch (Exception ex)
             {
-                AsyncLoggerPreloader.Log.LogError($"Exception while converting BepInEx loggers to async! {ex}");
+                AsyncLoggers.Log.LogError($"Exception while converting BepInEx loggers to async! {ex}");
             }
         }
         
@@ -98,7 +98,7 @@ namespace AsyncLoggers.Patches
             }
             catch (Exception ex)
             {
-                AsyncLoggerPreloader.Log.LogError($"Exception logging event {ex}");
+                AsyncLoggers.Log.LogError($"Exception logging event {ex}");
             }
         }
         
@@ -116,7 +116,7 @@ namespace AsyncLoggers.Patches
             }
             catch (Exception ex)
             {
-                AsyncLoggerPreloader.Log.LogError($"Exception logging mods {ex}");
+                AsyncLoggers.Log.LogError($"Exception logging mods {ex}");
             }
         }
     }
