@@ -91,16 +91,16 @@ namespace AsyncLoggers.DBAPI
                         });
                         asyncScheduler = new ThreadWrapper();
                     }
+                    else
+                    {
+                        AsyncLoggers.Log.LogError($"No Sqlite dll found disabling Database!");
+                    }
                 }
                 catch (Exception ex)
                 {
                     AsyncLoggers.Log.LogError($"Exception while initializing the database! {ex}");
                     Enabled = false;
                 }
-            }
-            else
-            {
-                AsyncLoggers.Log.LogError($"No Sqlite dll found disabling Database!");
             }
         }
 

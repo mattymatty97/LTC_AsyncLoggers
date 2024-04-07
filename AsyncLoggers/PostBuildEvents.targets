@@ -63,8 +63,6 @@
     <Target Name="CopyToGameFolder" AfterTargets="Build">
         <Message Importance="high" Text="Copying files to game directory. ($(ModDirectory1),$(ModDirectory2))"/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDirectory1)"/>
-<!--        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDirectory2)"/>-->
-        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(ModDirectory1)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(ModDirectory2)\%(Assets.RelativeDir)"/>
         <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(ModDirectory1)\$(Dependencies)"/>
     </Target>
@@ -83,9 +81,7 @@
     <!-- Automatically create the zip file, ready for distribution. -->
     <Target Name="PrepareZip" AfterTargets="Build" Condition="$(Configuration.Contains('Release'))">
         <Message Importance="normal" Text="Copying files to temporary directory."/>
-<!--        <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TempZipDir)\$(PluginZipStructure)"/>-->
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TempZipDir)\$(PatcherZipStructure)"/>
-        <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFolder="$(TempZipDir)\$(PatcherZipStructure)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(TempZipDir)\$(PluginZipStructure)\%(Assets.RelativeDir)"/>
         <Copy SourceFiles="@(ThunderStoreItems)" DestinationFolder="$(TempZipDir)\$(ThunderStoreItems)"/>
         <Copy SourceFiles="@(Integration)" DestinationFolder="$(TempZipDir)\IntegrationExamples\$(Integration)"/>

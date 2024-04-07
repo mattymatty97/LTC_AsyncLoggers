@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using AsyncLoggers.StaticContexts;
 using AsyncLoggers.Wrappers;
 using BepInEx.Bootstrap;
