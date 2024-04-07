@@ -13,9 +13,19 @@
         <Content Include="PostBuildEvents.targets"/>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="HarmonyX" Version="2.12.0" />
-        <PackageReference Include="Mono.Cecil" Version="0.11.5" />
         <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.0.1" />
+    </ItemGroup>
+    <!-- Defining the reference files that have to be publicized. -->
+    <ItemGroup>
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all"/>
+
+        <!-- Publicize directly when referencing -->
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.CoreModule.dll" Publicize="true"/>
+        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.dll" Publicize="true"/>
+        <PackageReference Include="BepInEx.BaseLib" Version="5.4.20" Publicize="true"/>
+        <PackageReference Include="BepInEx.Core" Version="5.4.21" Publicize="true"/>
+
+        <!-- clean referencing -->
     </ItemGroup>
     <Import Project="PostBuildEvents.targets"/>
 	<!-- Embedded Debug -->

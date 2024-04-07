@@ -19,18 +19,7 @@
     <ItemGroup>
         <Dependencies Include="..\packages\sqlite3.dll"/>
     </ItemGroup>
-    <!-- Defining the reference files that have to be publicized. -->
-    <ItemGroup>
-        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all"/>
 
-        <!-- Publicize directly when referencing -->
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.CoreModule.dll" Publicize="true"/>
-        <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.dll" Publicize="true"/>
-        <Reference Include="$(ProfileDirectory)\BepInEx\core\BepInEx.dll" Publicize="true"/>
-        <Reference Include="$(ProfileDirectory)\BepInEx\core\BepInEx.Preloader.dll" Publicize="true"/>
-
-        <!-- clean referencing -->
-    </ItemGroup>
 
     <!-- Ensure the user (you!) has actually set everything up properly. -->
     <Target Name="EnsureGameDirectoryDefined" BeforeTargets="PrepareForBuild">
