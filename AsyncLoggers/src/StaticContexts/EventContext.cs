@@ -6,14 +6,14 @@ namespace AsyncLoggers.StaticContexts
     public static class EventContext
     {
         [ThreadStatic]
-        private static long? _UUID;
+        private static long? _uuid;
 
-        private static long logCounter = 0L;
+        private static long _eventCounter = 0L;
 
         public static long? Uuid
         {
-            get => _UUID ?? Interlocked.Increment(ref logCounter);
-            set => _UUID = value;
+            get => _uuid ?? Interlocked.Increment(ref _eventCounter);
+            set => _uuid = value;
         }
     }
 }

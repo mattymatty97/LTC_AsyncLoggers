@@ -19,7 +19,7 @@ namespace AsyncLoggers.Patches
 
         [HarmonyPrefix]
         [HarmonyPatch(typeof(BepInEx.Logging.Logger), nameof(BepInEx.Logging.Logger.InternalLogEvent))]
-        private static bool wrapLogs(object sender, LogEventArgs eventArgs)
+        private static bool WrapLogs(object sender, LogEventArgs eventArgs)
         {
             if (!PluginConfig.BepInEx.Enabled.Value)
                 return true;
@@ -30,6 +30,11 @@ namespace AsyncLoggers.Patches
             var uuid = LogContext.Uuid!.Value;
             var timestamp = GenericContext.Timestamp;
 
+            if (PluginConfig.Timestamps.Enabled.Value)
+            {
+                BepInExLogEventArgsPatch.Contexts.GetOrCreateValue(eventArgs).Timestamp = AsyncLoggers.GetLogTimestamp().ToString();
+            }
+            
             foreach (ILogListener listener in Logger.Listeners)
             {
                 var wrapper = GenericContext._wrappersMap.GetOrAdd(listener, l => PluginConfig.BepInEx.Scheduler.Value switch
@@ -56,12 +61,6 @@ namespace AsyncLoggers.Patches
                     GenericContext.Async = true;
                     GenericContext.Timestamp = timestamp;
                     LogContext.Uuid = uuid;
-                                        
-                    if (PluginConfig.Timestamps.Enabled.Value)
-                    {
-                        BepInExLogEventArgsPatch.CONTEXTS.GetOrCreateValue(eventArgs).Timestamp = AsyncLoggers.GetLogTimestamp().ToString();
-                    }
-                            
                     listener?.LogEvent(sender, eventArgs);
                 }
                 catch (Exception ex)

@@ -1,3 +1,6 @@
+# v1.6.3
+- generate LogEvent timestamp only once
+
 # v1.6.2
 - fix Database rolling failing after 1 cycle
 - fix NRE during app closing if Database is disabled

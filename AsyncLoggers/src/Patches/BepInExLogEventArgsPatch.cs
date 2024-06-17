@@ -8,10 +8,9 @@ namespace AsyncLoggers.Patches
     [HarmonyPatch]
     internal class BepInExLogEventArgsPatch
     {
-        internal static readonly ConditionalWeakTable<LogEventArgs, LogContext> CONTEXTS =
-            new ConditionalWeakTable<LogEventArgs, LogContext>();
+        internal static readonly ConditionalWeakTable<LogEventArgs, LogEventContext> Contexts = new();
         
-        internal class LogContext
+        internal class LogEventContext
         {
             internal string Timestamp { get; set;}
         }
@@ -21,7 +20,7 @@ namespace AsyncLoggers.Patches
         private static void PrependTimestamp(LogEventArgs __instance, ref string __result)
         {
             if (PluginConfig.Timestamps.Enabled.Value && 
-                CONTEXTS.TryGetValue(__instance, out var logContext))
+                Contexts.TryGetValue(__instance, out var logContext))
             {
                 __result = $"[{logContext.Timestamp}] {__result}";
             }
