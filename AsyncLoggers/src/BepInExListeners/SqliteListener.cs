@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Globalization;
-using AsyncLoggers.DBAPI;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.LogEventArgs;
 using BepInEx.Logging;

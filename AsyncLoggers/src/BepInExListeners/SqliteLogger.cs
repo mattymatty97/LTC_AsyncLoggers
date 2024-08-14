@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 using BepInEx;
 using SQLite;
 
-namespace AsyncLoggers.DBAPI
+namespace AsyncLoggers.BepInExListeners
 {
     public static class SqliteChecker
     {
-        internal static bool isLoaded()
+        internal static bool IsLoaded()
         {
             try
             {
@@ -33,12 +33,12 @@ namespace AsyncLoggers.DBAPI
 
         internal static void Init(string outputFile)
         {
-            Enabled = PluginConfig.DbLogger.Enabled.Value && SqliteChecker.isLoaded();
+            Enabled = PluginConfig.DbLogger.Enabled.Value && SqliteChecker.IsLoaded();
             if (PluginConfig.DbLogger.Enabled.Value)
             {
                 try
                 {
-                    if (SqliteChecker.isLoaded())
+                    if (SqliteChecker.IsLoaded())
                     {
                         AsyncLoggers.Log.LogDebug($"creating db");
                         try

@@ -1,6 +1,5 @@
 ﻿using System;
 using AsyncLoggers.BepInExListeners;
-using AsyncLoggers.DBAPI;
 using AsyncLoggers.Proxy;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
