@@ -1,3 +1,6 @@
+# v2.0.0
+
+
 # v1.6.3
 - generate LogEvent timestamp only once
 

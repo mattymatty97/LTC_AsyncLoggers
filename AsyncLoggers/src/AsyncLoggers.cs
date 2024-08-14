@@ -7,7 +7,6 @@ using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.LogEventArgs;
 using BepInEx;
 using BepInEx.Logging;
-using BepInEx.Preloader;
 using HarmonyLib;
 using Mono.Cecil;
 using Logger = BepInEx.Logging.Logger;

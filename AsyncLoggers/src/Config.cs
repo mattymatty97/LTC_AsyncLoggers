@@ -46,23 +46,29 @@ internal static class PluginConfig
         FilterConfig = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, $"{AsyncLoggers.NAME}.Filter.cfg"), true);
         //Initialize Configs
         //Timestamps
-        Timestamps.Enabled = _config.Bind("Timestamps","enabled",true
+        Timestamps.Enabled = _config.Bind("Timestamps","Enabled",true
             ,"add numeric timestamps to the logs");
-        Timestamps.Type = _config.Bind("Timestamps","type",TimestampType.DateTime
+        Timestamps.Type = _config.Bind("Timestamps","Type",TimestampType.DateTime
             ,"what kind of timestamps to use");            
         //DbLogger
-        DbLogger.Enabled = _config.Bind("DbLogger","enabled",true
+        DbLogger.Enabled = _config.Bind("DbLogger","Enabled",true
             ,"flush logs to a Sqlite database");
-        DbLogger.RotationSize = _config.Bind("DbLogger","rotation_size", 100000000L
+        DbLogger.RotationSize = _config.Bind("DbLogger","Min file size for rotation", 100000000L
             ,"how big the file can grow before it is rotated ( in bytes )");
         //Scheduler
-        Scheduler.ThreadBufferSize = _config.Bind("Scheduler","thread_buffer_size",500U
+        Scheduler.ThreadBufferSize = _config.Bind("Scheduler","Buffer max size",500U
             ,"maximum size of the log queue for the Threaded Scheduler ( each logger has a separate one )");
-        Scheduler.ShutdownType = _config.Bind("Scheduler","shutdown_type",ShutdownType.Await
+        Scheduler.ShutdownType = _config.Bind("Scheduler","Shutdown style",ShutdownType.Await
             ,"close immediately or wait for all logs to be written ( Instant/Await ) ");
         //BepInEx
-        BepInEx.Enabled = _config.Bind("BepInEx","enabled",true
+        BepInEx.Enabled = _config.Bind("BepInEx","Enabled",true
             ,"convert BepInEx loggers to async");
+        BepInEx.Disk = _config.Bind("BepInEx","Async File",true
+            ,"convert BepInEx disk writer to async");
+        BepInEx.Console = _config.Bind("BepInEx","Async Console",true
+            ,"convert BepInEx console to async");
+        BepInEx.Unity = _config.Bind("BepInEx","Async Unity",false
+            ,"convert BepInEx->Unity Log to async");
 
         CleanOrphanedEntries(_config);
     }
@@ -99,6 +105,9 @@ internal static class PluginConfig
     public static class BepInEx
     {
         public static ConfigEntry<bool> Enabled;
+        public static ConfigEntry<bool> Console;
+        public static ConfigEntry<bool> Disk;
+        public static ConfigEntry<bool> Unity;
     }
         
     public enum ShutdownType

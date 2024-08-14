@@ -51,10 +51,18 @@ internal class ChainloaderPatch
                     switch (listener)
                     {
                         case UnityLogListener:
-                            LoggerPatch.SyncListeners.Add(listener);
+                            if (!PluginConfig.BepInEx.Unity.Value)
+                                LoggerPatch.SyncListeners.Add(listener);
                             LoggerPatch.UnfilteredListeners.Add(listener);
                             break;
-                        case DiskLogListener or ConsoleLogListener:
+                        case DiskLogListener:
+                            if (!PluginConfig.BepInEx.Disk.Value)
+                                LoggerPatch.SyncListeners.Add(listener);
+                            LoggerPatch.TimestampedListeners.Add(listener);
+                            break;
+                        case ConsoleLogListener:
+                            if (!PluginConfig.BepInEx.Console.Value)
+                                LoggerPatch.SyncListeners.Add(listener);
                             LoggerPatch.TimestampedListeners.Add(listener);
                             break;
                     }
