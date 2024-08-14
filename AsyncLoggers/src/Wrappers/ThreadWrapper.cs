@@ -1,34 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Threading;
-using AsyncLoggers.StaticContexts;
-using DisruptorUnity3d;
-using UnityEngine;
+using AsyncLoggers.Buffer;
 
 namespace AsyncLoggers.Wrappers
 {
     public class ThreadWrapper: IWrapper
     {
-        internal static readonly HashSet<ThreadWrapper> _wrappers = new HashSet<ThreadWrapper>();
+        internal static readonly HashSet<ThreadWrapper> Wrappers = [];
         private delegate bool RunCondition();
 
         private readonly Thread _loggingThread;
         private readonly SemaphoreSlim _semaphore;
-        private readonly ConcurrentCircularBuffer<IWrapper.LogCallback> _taskRingBuffer;
+        private readonly ConcurrentCircularBuffer<Tuple<IWrapper.LogCallback,object, BepInEx.Logging.LogEventArgs>> _taskRingBuffer;
         private static readonly RunCondition DefaultCondition = ()=>true;
         private volatile RunCondition _shouldRun = DefaultCondition;
 
         internal ThreadWrapper()
         {
-            _taskRingBuffer = new ConcurrentCircularBuffer<IWrapper.LogCallback>(PluginConfig.Scheduler.ThreadBufferSize.Value);
+            _taskRingBuffer = new ConcurrentCircularBuffer<Tuple<IWrapper.LogCallback,object, BepInEx.Logging.LogEventArgs>>(PluginConfig.Scheduler.ThreadBufferSize?.Value ?? 500);
             _semaphore = new SemaphoreSlim(0);
             _loggingThread = new Thread(LogWorker);
             _loggingThread.Start();
-            _wrappers.Add(this);
+            Wrappers.Add(this);
         }
         
-        [HideInCallstack]
         private void LogWorker()
         {
             try
@@ -42,7 +38,7 @@ namespace AsyncLoggers.Wrappers
                         
                         if (_taskRingBuffer.TryDequeue(out var task))
                         {
-                            task?.Invoke();
+                            task?.Item1.Invoke(task.Item2,task.Item3);
                         }
                     }
                     catch (Exception ex)
@@ -80,12 +76,12 @@ namespace AsyncLoggers.Wrappers
             }
         }
         
-        public void Schedule(IWrapper.LogCallback callback)
+        public void Schedule(IWrapper.LogCallback callback, object sender, BepInEx.Logging.LogEventArgs eventArgs)
         {
             if (_shouldRun != DefaultCondition) 
                 return;
 
-            _taskRingBuffer.Enqueue(callback);
+            _taskRingBuffer.Enqueue(new (callback, sender, eventArgs));
             _semaphore.Release();
         }
 

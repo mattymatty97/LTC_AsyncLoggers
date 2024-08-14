@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Globalization;
 using AsyncLoggers.DBAPI;
-using AsyncLoggers.StaticContexts;
+using AsyncLoggers.Wrappers;
+using AsyncLoggers.Wrappers.LogEventArgs;
 using BepInEx.Logging;
 using SQLite;
 using LogEventArgs = BepInEx.Logging.LogEventArgs;
@@ -14,7 +15,7 @@ namespace AsyncLoggers.BepInExListeners
     {
         public SqliteListener()
         {
-            SqliteLoggerImpl.Connection.CreateTable<Tables.Logs>(CreateFlags.AutoIncPK);
+            SqliteLogger.Connection.CreateTable<Tables.Logs>(CreateFlags.AutoIncPK);
         }
 
         public void Dispose()
@@ -23,24 +24,25 @@ namespace AsyncLoggers.BepInExListeners
 
         public void LogEvent(object sender, LogEventArgs eventArgs)
         {
+            var context = eventArgs as LogEventWrapper;
             var log = new Tables.Logs
             {
-                execution_id = SqliteLoggerImpl.ExecutionId,
-                UUID = (int)LogContext.Uuid!,
-                timestamp = GenericContext.Timestamp?.ToString("o", CultureInfo.InvariantCulture),
+                execution_id = SqliteLogger.ExecutionId,
+                UUID = (int)(context?.Uuid ?? -1),
+                timestamp = context?.Timestamp.ToString("o", CultureInfo.InvariantCulture),
                 source = eventArgs.Source.SourceName,
                 level = eventArgs.Level.ToString(),
                 message = eventArgs.Data?.ToString()
             };
             try
             {
-                SqliteLoggerImpl.Connection.Insert(log);
+                SqliteLogger.Connection.Insert(log);
             }
             catch (Exception ex)
             {
                 AsyncLoggers.Log.LogError(
                     $"Exception writing log to db [{log.level} {log.source}]: {ex}");
-                SqliteLoggerImpl.Enabled = false;
+                SqliteLogger.Enabled = false;
             }
         }
         
@@ -55,6 +57,8 @@ namespace AsyncLoggers.BepInExListeners
                 [Indexed] public string source { get; set; }
                 [Indexed] public string level { get; set; }
                 public string message { get; set; }
+                
+                public string stacktrace { get; set; }
             }
         }
     }

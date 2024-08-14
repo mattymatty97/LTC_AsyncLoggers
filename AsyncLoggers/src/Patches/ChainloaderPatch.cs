@@ -1,0 +1,69 @@
+﻿using System;
+using AsyncLoggers.BepInExListeners;
+using AsyncLoggers.DBAPI;
+using AsyncLoggers.Proxy;
+using BepInEx.Bootstrap;
+using BepInEx.Logging;
+using HarmonyLib;
+using Logger = BepInEx.Logging.Logger;
+
+namespace AsyncLoggers.Patches;
+
+[HarmonyPatch]
+internal class ChainloaderPatch
+{
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Initialize))]
+    private static void OnInitialize()
+    {
+        LoggerPatch.SyncListeners.Remove(BepInEx.Preloader.Preloader.PreloaderLog);
+                
+        ProxyClass.AppendQuittingCallback();
+            
+        try
+        {
+            if (SqliteLogger.Enabled)
+            {
+                AsyncLoggers.Log.LogWarning($"Adding Sqlite to BepInEx Listeners");
+                var sqliteListener = new SqliteListener();
+                Logger.Listeners.Add(sqliteListener);
+                LoggerPatch.UnfilteredListeners.Add(sqliteListener);
+            }
+        }
+        catch (Exception ex)
+        {
+            AsyncLoggers.Log.LogError($"Exception starting {ex}");
+        }
+    }
+        
+    [HarmonyPrefix]
+    [HarmonyPatch(typeof(Logger), nameof(Logger.LogMessage))]
+    private static void TrackLoadedPlugins(object data)
+    {
+        try
+        {
+            if (data is "Chainloader startup complete")
+            {
+                SqliteLogger.WriteMods(Chainloader.PluginInfos.Values);
+
+                foreach (var listener in Logger.Listeners)
+                {
+                    switch (listener)
+                    {
+                        case UnityLogListener:
+                            LoggerPatch.SyncListeners.Add(listener);
+                            LoggerPatch.UnfilteredListeners.Add(listener);
+                            break;
+                        case DiskLogListener or ConsoleLogListener:
+                            LoggerPatch.TimestampedListeners.Add(listener);
+                            break;
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            AsyncLoggers.Log.LogError($"Exception logging mods {ex}");
+        }
+    }
+}

@@ -73,7 +73,6 @@
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TempZipDir)\$(PatcherZipStructure)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(TempZipDir)\$(PluginZipStructure)\%(Assets.RelativeDir)"/>
         <Copy SourceFiles="@(ThunderStoreItems)" DestinationFolder="$(TempZipDir)\$(ThunderStoreItems)"/>
-        <Copy SourceFiles="@(Integration)" DestinationFolder="$(TempZipDir)\IntegrationExamples\$(Integration)"/>
         <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(TempZipDir)\$(PatcherZipStructure)\$(Dependencies)"/>
     </Target>
     <Target Name="CreateZip" AfterTargets="PrepareZip" Condition="$(Configuration.Contains('Release'))">

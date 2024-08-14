@@ -1,11 +1,10 @@
-﻿namespace AsyncLoggers.Wrappers
+﻿namespace AsyncLoggers.Wrappers;
+
+public interface IWrapper
 {
-    public interface IWrapper
-    {
-        public delegate void LogCallback();
+    public delegate void LogCallback(object sender, BepInEx.Logging.LogEventArgs eventArgs);
 
-        public void Schedule(LogCallback callback);
+    public void Schedule(LogCallback callback, object sender, BepInEx.Logging.LogEventArgs eventArgs);
 
-        public void Stop(bool immediate = false);
-    }
+    public void Stop(bool immediate = false);
 }

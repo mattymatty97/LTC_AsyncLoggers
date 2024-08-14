@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
-using AsyncLoggers.StaticContexts;
-using AsyncLoggers.Wrappers;
 using BepInEx;
 using SQLite;
 
@@ -27,9 +23,8 @@ namespace AsyncLoggers.DBAPI
         }
     }
 
-    internal static class SqliteLoggerImpl
+    internal static class SqliteLogger
     {
-        private static IWrapper asyncScheduler;
 
         internal static bool Enabled { get; set; }
 
@@ -72,24 +67,11 @@ namespace AsyncLoggers.DBAPI
 
                         Connection.CreateTable<Tables.Executions>(CreateFlags.AutoIncPK);
                         Connection.CreateTable<Tables.Mods>(CreateFlags.AutoIncPK);
-                        Connection.CreateTable<Tables.Events>(CreateFlags.AutoIncPK);
                         Connection.CreateTable<Tables.ModData>(CreateFlags.AutoIncPK);
 
                         ExecutionId = GetExecution();
 
                         AsyncLoggers.Log.LogDebug($"ExecutionID is {ExecutionId}");
-
-                        Connection.Insert(new Tables.Events
-                        {
-                            execution_id = ExecutionId,
-                            UUID = (int)EventContext.Uuid!,
-                            timestamp = GenericContext.FormatTimestamp(Process.GetCurrentProcess().StartTime
-                                .ToUniversalTime()),
-                            source = "Application",
-                            tag = "Start",
-                            data = "Process Started"
-                        });
-                        asyncScheduler = new ThreadWrapper();
                     }
                     else
                     {
@@ -106,117 +88,8 @@ namespace AsyncLoggers.DBAPI
 
         internal static void Terminate(bool immediate)
         {
-            if (Enabled)
-            {
-                try
-                {
-                    _WriteEvent("Application", "Quitting", "Stopping Process");
-                }
-                catch (Exception)
-                {
-                    //ignored
-                }
-            }
             Enabled = false;
-            asyncScheduler?.Stop(immediate);
         }
-
-        internal static void WriteEvent(string source, string tag, string data, DateTime? timestamp = null)
-        {
-            if (Enabled)
-            {
-                timestamp ??= GenericContext.Timestamp;
-                var uuid = EventContext.Uuid;
-                asyncScheduler.Schedule(() =>
-                {
-                    try
-                    {
-                        GenericContext.Async = true;
-                        GenericContext.Timestamp = timestamp;
-                        EventContext.Uuid = uuid;
-                        _WriteEvent(source, tag, data);
-                    }
-                    catch (Exception ex)
-                    {
-                        AsyncLoggers.Log.LogError(
-                            $"Exception writing event {source}/{tag}: {ex}");
-                        Enabled = false;
-                    }
-                    finally
-                    {
-                        GenericContext.Async = false;
-                        GenericContext.Timestamp = null;
-                        EventContext.Uuid = null;
-                    }
-                });
-            }
-        }
-
-        private static void _WriteEvent(string source, string tag, string data)
-        {
-            var value = new Tables.Events
-            {
-                execution_id = ExecutionId,
-                UUID = (int)EventContext.Uuid!,
-                timestamp = GenericContext.Timestamp?.ToString("o", CultureInfo.InvariantCulture),
-                source = source,
-                tag = tag,
-                data = data
-            };
-            Connection.Insert(value);
-
-            Task.Factory.StartNew(() =>
-                SqliteLogger.onEventWritten(value.UUID, value.source, value.tag, value.data,
-                    GenericContext.Timestamp!.Value));
-        }
-
-        internal static void WriteData(string source, string tag, string data, DateTime? timestamp = null)
-        {
-            if (Enabled)
-            {
-                timestamp ??= GenericContext.Timestamp;
-                asyncScheduler.Schedule(() =>
-                {
-                    try
-                    {
-                        GenericContext.Async = true;
-                        GenericContext.Timestamp = timestamp;
-                        EventContext.Uuid = 0L;
-                        _WriteData(source, tag, data);
-                    }
-                    catch (Exception ex)
-                    {
-                        AsyncLoggers.Log.LogError(
-                            $"Exception writing data {source}/{tag}: {ex}");
-                        Enabled = false;
-                    }
-                    finally
-                    {
-                        GenericContext.Async = false;
-                        GenericContext.Timestamp = null;
-                        EventContext.Uuid = null;
-                    }
-                });
-            }
-        }
-
-        private static void _WriteData(string source, string tag, string data)
-        {
-            var value = new Tables.ModData()
-            {
-                execution_id = ExecutionId,
-                timestamp = GenericContext.Timestamp?.ToString("o", CultureInfo.InvariantCulture),
-                source = source,
-                tag = tag,
-                data = data
-            };
-
-            Connection.Insert(value);
-
-            Task.Factory.StartNew(() =>
-                SqliteLogger.onDataWritten(value.source, value.tag, value.data, GenericContext.Timestamp!.Value));
-        }
-
         internal static void WriteMods(IEnumerable<PluginInfo> loadedMods)
         {
             if (Enabled)

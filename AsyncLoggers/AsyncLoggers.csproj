@@ -4,7 +4,8 @@
         <RootNamespace>AsyncLoggers</RootNamespace>
         <AssemblyName>AsyncLoggers</AssemblyName>
         <Product>Async Loggers</Product>
-        <Version>1.6.3</Version>
+        <Version>2.0.0</Version>
+        <PackageLicenseExpression>LGPL-2.1+</PackageLicenseExpression>
         <TargetFramework>netstandard2.1</TargetFramework>
         <LangVersion>Latest</LangVersion>
     </PropertyGroup>
@@ -22,8 +23,13 @@
         <!-- Publicize directly when referencing -->
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.CoreModule.dll" Publicize="true"/>
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.dll" Publicize="true"/>
-        <PackageReference Include="BepInEx.BaseLib" Version="5.4.20" Publicize="true"/>
-        <PackageReference Include="BepInEx.Core" Version="5.4.21" Publicize="true"/>
+        <Reference Include="$(ProfileDirectory)\BepInEx\core\BepInEx.dll" Publicize="true"/>
+        <Reference Include="$(ProfileDirectory)\BepInEx\core\BepInEx.Preloader.dll" Publicize="true"/>
+        
+        
+        <Reference Include="$(ProfileDirectory)\BepInEx\core\Mono.Cecil.dll" Publicize="false"/>
+        <Reference Include="$(ProfileDirectory)\BepInEx\core\0Harmony.dll" Publicize="false"/>
+        <Reference Include="$(ProfileDirectory)\BepInEx\core\BepInEx.Harmony.dll" Publicize="false"/>
 
         <!-- clean referencing -->
     </ItemGroup>
