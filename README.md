@@ -8,23 +8,37 @@ Async Loggers
 
 # For the users:
 
+### Async Logs:
 remove any log related delays by processing them separately from the game stuff.
 the more logs your modpack generates the bigger the impact this mod has!
 
+### Log filter:
+Limit logs from mods by specifying a LogLevel for each one of them
+
 # For the Developers:
-
-included in the zip there is an example Proxy class to use for soft-depending on this mod
-to allow you to log custom events/data to the sqliteDB
-
-#### <u>Any Data written to the database is  for debug purposes only and is not persistent</u>
-
-#### minimum version for API is <u>v1.6.0</u>
+the main class `AsyncLoggers.AsyncLoggers` contains 4 methods to register your own `LogListener` into AsyncLoggers system:
+- SyncListener (listeners will receive logs directly)
+```c#
+public static bool RegisterSyncListener(ILogListener listener)
+public static bool UnRegisterSyncListener(ILogListener listener)
+```
+- UnfilteredListener (listeners will bypass the user defined filters and receive all logs)
+```c#
+public static bool RegisterUnfilteredListener(ILogListener listener)
+public static bool UnRegisterUnfilteredListener(ILogListener listener)
+```
+- TimestampedListener (listeners will have the TimeStamp prepended to the LogEventArgs Data)
+```c#
+public static bool RegisterTimestampedListener(ILogListener listener)
+public static bool UnRegisterTimestampedListener(ILogListener listener)
+```
 
 Installation
 ------------
 
-- Install [BepInEx](https://thunderstore.io/c/lethal-company/p/BepInEx/BepInExPack/)
-- Unzip this mod into your `Lethal Company/BepInEx/plugins` folder
+- Install BepInEx and run it once
+- Unzip this mod into your `BepInEx/plugins` folder
+- <u>Move</u> the files inside the mods `/BepInEx/patchers` folder into <u>your</u> `BepInEx/patchers` folder
 
-Or use the mod manager to handle the installing for you.
+Or let a mod manager handle the installation for you.
 

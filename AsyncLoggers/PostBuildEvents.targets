@@ -8,16 +8,14 @@
         <GameDirTargetsFullPath>$(ProjectDir)$(GameDirTargetsFile)</GameDirTargetsFullPath>
     </PropertyGroup>
     <ItemGroup>
-        <ThunderStoreItems Include="..\icon.png"/>
-        <ThunderStoreItems Include="..\manifest.json"/>
-        <ThunderStoreItems Include="..\README.md"/>
-        <ThunderStoreItems Include="..\CHANGELOG.md"/>
+        <ThunderStoreItems Include="$(SolutionDir)\icon.png"/>
+        <ThunderStoreItems Include="$(SolutionDir)\manifest.json"/>
+        <ThunderStoreItems Include="$(SolutionDir)\README.md"/>
+        <ThunderStoreItems Include="$(SolutionDir)\CHANGELOG.md"/>
+        <ThunderStoreItems Include="$(SolutionDir)\LICENSE"/>
     </ItemGroup>
     <ItemGroup>
-        <Integration Include="..\integration\AsyncLoggerProxy.cs"/>
-    </ItemGroup>
-    <ItemGroup>
-        <Dependencies Include="..\packages\sqlite3.dll"/>
+        <Dependencies Include="$(SolutionDir)\packages\sqlite3.dll"/>
     </ItemGroup>
 
 

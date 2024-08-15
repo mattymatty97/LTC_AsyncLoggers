@@ -76,7 +76,7 @@ internal static class PluginConfig
     internal static void CleanOrphanedEntries(ConfigFile config)
     {
         //remove unused options
-        PropertyInfo orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
+        var orphanedEntriesProp = config.GetType().GetProperty("OrphanedEntries", BindingFlags.NonPublic | BindingFlags.Instance);
 
         var orphanedEntries = (Dictionary<ConfigDefinition, string>)orphanedEntriesProp!.GetValue(config, null);
 

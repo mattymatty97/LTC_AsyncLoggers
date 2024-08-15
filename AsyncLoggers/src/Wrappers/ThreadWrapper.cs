@@ -16,11 +16,14 @@ namespace AsyncLoggers.Wrappers
         private static readonly RunCondition DefaultCondition = ()=>true;
         private volatile RunCondition _shouldRun = DefaultCondition;
 
-        internal ThreadWrapper()
+        internal ThreadWrapper(string threadName = nameof(ThreadWrapper))
         {
             _taskRingBuffer = new ConcurrentCircularBuffer<Tuple<IWrapper.LogCallback,object, BepInEx.Logging.LogEventArgs>>(PluginConfig.Scheduler.ThreadBufferSize?.Value ?? 500);
             _semaphore = new SemaphoreSlim(0);
-            _loggingThread = new Thread(LogWorker);
+            _loggingThread = new Thread(LogWorker)
+            {
+                Name = threadName
+            };
             _loggingThread.Start();
             Wrappers.Add(this);
         }

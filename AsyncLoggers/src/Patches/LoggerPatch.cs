@@ -6,7 +6,6 @@ using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.LogEventArgs;
 using BepInEx.Logging;
 using HarmonyLib;
-using UnityEngine;
 using Logger = BepInEx.Logging.Logger;
 
 namespace AsyncLoggers.Patches;
@@ -14,7 +13,7 @@ namespace AsyncLoggers.Patches;
 [HarmonyPatch]
 internal class LoggerPatch
 {
-    private static readonly IWrapper MainWrapper = new ThreadWrapper();
+    private static readonly IWrapper MainWrapper = new ThreadWrapper("Log Dispatcher");
 
     internal static readonly HashSet<ILogListener> SyncListeners = [];
     internal static readonly HashSet<ILogListener> UnfilteredListeners = [];
@@ -40,7 +39,8 @@ internal class LoggerPatch
         }
         
         var wrappedEvent = new LogEventWrapper(eventArgs.Data, eventArgs.Level, eventArgs.Source, stacktrace);
-        var timestampedEvent = new TimestampedLogEventArg(wrappedEvent);
+        var timestampedEvent = PluginConfig.Timestamps.Enabled.Value ?
+        new TimestampedLogEventArg(wrappedEvent) : wrappedEvent;
 
         foreach (var listener in SyncListeners)
         {
@@ -69,16 +69,16 @@ internal class LoggerPatch
 
     private static void HandleLogEvent(object sender, LogEventArgs eventArgs)
     {
-        var timestampedEvent = new TimestampedLogEventArg((LogEventWrapper)eventArgs);
+        var timestampedEvent = PluginConfig.Timestamps.Enabled.Value ? new TimestampedLogEventArg((LogEventWrapper)eventArgs) : eventArgs;
         try
         {
-            var list = new LinkedList<ILogListener>(Logger.Listeners);
+            var list = new LinkedList<ILogListener>(Logger.Listeners.Where(l => !SyncListeners.Contains(l)));
             foreach (var listener in list)
             {
                 if (!ShouldEmitLog(listener, eventArgs.Source, eventArgs.Level)) 
                     continue;
 
-                var wrapper = WrappersMap.GetOrAdd(listener, _ => new ThreadWrapper());
+                var wrapper = WrappersMap.GetOrAdd(listener, l => new ThreadWrapper($"{l.GetType().Name} Wrapper"));
 
                 wrapper?.Schedule(DispatchLogEvent, sender, TimestampedListeners.Contains(listener) ? timestampedEvent : eventArgs);
                 

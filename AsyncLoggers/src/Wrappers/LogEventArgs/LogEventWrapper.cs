@@ -10,6 +10,8 @@ public class LogEventWrapper : Logging.LogEventArgs
     private static long _logCounter = 0L;
     
     public readonly DateTime Timestamp;
+    
+    public readonly string AppTimestamp;
 
     public readonly long Uuid;
 
@@ -20,10 +22,14 @@ public class LogEventWrapper : Logging.LogEventArgs
         StackTrace = stackTrace;
         Timestamp = DateTime.UtcNow;
         Uuid = Interlocked.Increment(ref _logCounter);
+        AppTimestamp = AsyncLoggers.GetLogTimestamp(this).ToString();
     }
 
-    public string FormatTimestamp()
+    protected LogEventWrapper(object data, LogLevel level, ILogSource source, DateTime timestamp, string appTimestamp, long uuid, string stackTrace) : base(data, level, source)
     {
-        return Timestamp.ToString("MM/dd/yyyy HH:mm:ss.fffffff");
+        Timestamp = timestamp;
+        AppTimestamp = appTimestamp;
+        Uuid = uuid;
+        StackTrace = stackTrace;
     }
 }

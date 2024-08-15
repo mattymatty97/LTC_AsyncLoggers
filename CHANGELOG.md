@@ -1,5 +1,11 @@
 # v2.0.0
+- remove DBAPI
+- add some api to handle custom ILogListeners
+- remove patches to unity loggers
+- embed AsyncLoggers.Filter
+- immediately defer logs with a global Dispatcher Thread
 
+---
 
 # v1.6.3
 - generate LogEvent timestamp only once

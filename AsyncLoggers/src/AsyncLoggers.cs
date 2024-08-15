@@ -21,7 +21,7 @@ namespace AsyncLoggers
         internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
         private static Harmony _harmony;
         
-        private static int startTime;
+        private static int _startTime;
 
         public static IEnumerable<string> TargetDLLs { get; } = new string[] {};
 
@@ -36,7 +36,7 @@ namespace AsyncLoggers
             
             SqliteLogger.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
 
-            startTime = Environment.TickCount & Int32.MaxValue;
+            _startTime = Environment.TickCount & Int32.MaxValue;
             if (PluginConfig.Timestamps.Enabled.Value)
                 Log.LogWarning(
                     $"{NAME} Timestamps start at {DateTime.UtcNow:dddd, dd MMMM yyyy HH:mm:ss.fffffff} UTC");
@@ -51,7 +51,7 @@ namespace AsyncLoggers
                 },
                 PluginConfig.TimestampType.TickCount => (_) =>
                 {
-                    var timestamp = $"{(Environment.TickCount & Int32.MaxValue) - startTime:0000000000000000}";
+                    var timestamp = $"{(Environment.TickCount & Int32.MaxValue) - _startTime:0000000000000000}";
                     return timestamp.Substring(timestamp.Length - 16);
                 },
                 PluginConfig.TimestampType.Counter => (le) =>
