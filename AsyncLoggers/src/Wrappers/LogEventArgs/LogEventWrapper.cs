@@ -17,6 +17,23 @@ public class LogEventWrapper : Logging.LogEventArgs
 
     public readonly string StackTrace;
 
+    private bool? _isFiltered;
+    
+    public bool IsFiltered
+    {
+        get
+        {
+            _isFiltered ??= CheckFilter();
+            return _isFiltered.Value;
+        }
+    }
+
+    private bool CheckFilter()
+    {
+        var sourceMask = FilterConfig.GetMaskForSource(Source);
+        return (Level & sourceMask) == 0;
+    }
+
     public LogEventWrapper(object data, LogLevel level, ILogSource source, string stackTrace = null) : base(data, level, source)
     {
         StackTrace = stackTrace;

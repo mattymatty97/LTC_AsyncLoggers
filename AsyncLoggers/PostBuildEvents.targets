@@ -15,7 +15,7 @@
         <ThunderStoreItems Include="$(SolutionDir)\LICENSE"/>
     </ItemGroup>
     <ItemGroup>
-        <Dependencies Include="$(SolutionDir)\packages\sqlite3.dll"/>
+        <SQLite Include="$(SolutionDir)\Dependency\sqlite3.dll"/>
     </ItemGroup>
 
 
@@ -51,7 +51,7 @@
         <Message Importance="high" Text="Copying files to game directory. ($(ModDirectory1),$(ModDirectory2))"/>
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModDirectory1)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(ModDirectory2)\%(Assets.RelativeDir)"/>
-        <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(ModDirectory1)\$(Dependencies)"/>
+        <Copy SourceFiles="@(SQLite)" DestinationFolder="$(ModDirectory1)\sqlite_native\$(SQLite)"/>
     </Target>
 
     <!-- Find the current version of the assembly. -->
@@ -71,7 +71,7 @@
         <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(TempZipDir)\$(PatcherZipStructure)"/>
         <Copy SourceFiles="@(Assets)" DestinationFolder="$(TempZipDir)\$(PluginZipStructure)\%(Assets.RelativeDir)"/>
         <Copy SourceFiles="@(ThunderStoreItems)" DestinationFolder="$(TempZipDir)\$(ThunderStoreItems)"/>
-        <Copy SourceFiles="@(Dependencies)" DestinationFolder="$(TempZipDir)\$(PatcherZipStructure)\$(Dependencies)"/>
+        <Copy SourceFiles="@(SQLite)" DestinationFolder="$(TempZipDir)\$(PatcherZipStructure)\sqlite_native\$(SQLite)"/>
     </Target>
     <Target Name="CreateZip" AfterTargets="PrepareZip" Condition="$(Configuration.Contains('Release'))">
         <Message Importance="high" Text="Zipping project for distribution."/>

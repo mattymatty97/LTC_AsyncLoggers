@@ -42,8 +42,8 @@ internal static class PluginConfig
         
     internal static void Init()
     {
-        _config = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, $"{AsyncLoggers.NAME}.cfg"), true);
-        FilterConfig = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, $"{AsyncLoggers.NAME}.Filter.cfg"), true);
+        _config = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME ,"Config.cfg"), true);
+        FilterConfig = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME, "LogLevels.cfg"), true);
         //Initialize Configs
         //Timestamps
         Timestamps.Enabled = _config.Bind("Timestamps","Enabled",true
@@ -61,8 +61,6 @@ internal static class PluginConfig
         Scheduler.ShutdownType = _config.Bind("Scheduler","Shutdown style",ShutdownType.Await
             ,"close immediately or wait for all logs to be written ( Instant/Await ) ");
         //BepInEx
-        BepInEx.Enabled = _config.Bind("BepInEx","Enabled",true
-            ,"convert BepInEx loggers to async");
         BepInEx.Disk = _config.Bind("BepInEx","Async File",true
             ,"convert BepInEx disk writer to async");
         BepInEx.Console = _config.Bind("BepInEx","Async Console",true
@@ -104,7 +102,6 @@ internal static class PluginConfig
         
     public static class BepInEx
     {
-        public static ConfigEntry<bool> Enabled;
         public static ConfigEntry<bool> Console;
         public static ConfigEntry<bool> Disk;
         public static ConfigEntry<bool> Unity;

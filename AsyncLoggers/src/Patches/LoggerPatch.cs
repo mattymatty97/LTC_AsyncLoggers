@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.LogEventArgs;
 using BepInEx.Logging;
@@ -26,9 +27,6 @@ internal class LoggerPatch
     [HarmonyPatch(typeof(Logger), nameof(Logger.InternalLogEvent))]
     private static bool WrapLogs(object sender, LogEventArgs eventArgs)
     {
-        if (!PluginConfig.BepInEx.Enabled.Value)
-            return true;
-
         if (sender == AsyncLoggers.Log)
             return true;
         
@@ -44,7 +42,7 @@ internal class LoggerPatch
 
         foreach (var listener in SyncListeners)
         {
-            if (ShouldEmitLog(listener, wrappedEvent.Source, wrappedEvent.Level))
+            if (ShouldEmitLog(listener, wrappedEvent))
             {
                 listener.LogEvent(sender, TimestampedListeners.Contains(listener) ? timestampedEvent : wrappedEvent);
             }
@@ -57,25 +55,23 @@ internal class LoggerPatch
 
         return false;
     }
-
-    private static bool ShouldEmitLog(ILogListener listener, ILogSource source, LogLevel level)
+    
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool ShouldEmitLog(ILogListener listener, LogEventWrapper eventArgs)
     {
-        if (UnfilteredListeners.Contains(listener))
-            return true;
-
-        var sourceMask = FilterConfig.GetMaskForSource(source);
-        return (level & sourceMask) != 0;
+        return UnfilteredListeners.Contains(listener) || !eventArgs.IsFiltered;
     }
 
     private static void HandleLogEvent(object sender, LogEventArgs eventArgs)
     {
-        var timestampedEvent = PluginConfig.Timestamps.Enabled.Value ? new TimestampedLogEventArg((LogEventWrapper)eventArgs) : eventArgs;
+        var wrappedEventArgs = (LogEventWrapper)eventArgs;
+        var timestampedEvent = PluginConfig.Timestamps.Enabled.Value ? new TimestampedLogEventArg(wrappedEventArgs) : eventArgs;
         try
         {
             var list = new LinkedList<ILogListener>(Logger.Listeners.Where(l => !SyncListeners.Contains(l)));
             foreach (var listener in list)
             {
-                if (!ShouldEmitLog(listener, eventArgs.Source, eventArgs.Level)) 
+                if (!ShouldEmitLog(listener, wrappedEventArgs)) 
                     continue;
 
                 var wrapper = WrappersMap.GetOrAdd(listener, l => new ThreadWrapper($"{l.GetType().Name} Wrapper"));

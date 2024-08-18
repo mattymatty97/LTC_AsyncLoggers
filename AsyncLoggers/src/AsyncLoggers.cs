@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.Patches;
+//using AsyncLoggers.Sqlite;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.LogEventArgs;
 using BepInEx;
@@ -22,6 +24,8 @@ namespace AsyncLoggers
         private static Harmony _harmony;
         
         private static int _startTime;
+        
+        //private static Task<bool> _sqliteTask;
 
         public static IEnumerable<string> TargetDLLs { get; } = new string[] {};
 
@@ -33,8 +37,8 @@ namespace AsyncLoggers
         {
             Log.LogInfo($"{NAME} Prepatcher Started");
             PluginConfig.Init();
-            
-            SqliteLogger.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
+
+            //_sqliteTask = SQLiteLoader.EnsureSQLite();
 
             _startTime = Environment.TickCount & Int32.MaxValue;
             if (PluginConfig.Timestamps.Enabled.Value)
@@ -83,6 +87,13 @@ namespace AsyncLoggers
         
         public static void Finish()
         {
+            //_sqliteTask.Wait();
+            
+            //if(_sqliteTask.Result)
+                SqliteLogger.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
+            //else
+            //  SqliteLogger.Enabled = false;
+            
             _harmony = new Harmony(GUID);
             _harmony.PatchAll(typeof(PreloaderConsoleListenerPatch));
             _harmony.PatchAll(typeof(ChainloaderPatch));
