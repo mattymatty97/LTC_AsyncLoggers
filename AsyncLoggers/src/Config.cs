@@ -67,7 +67,9 @@ internal static class PluginConfig
             ,"convert BepInEx console to async");
         BepInEx.Unity = _config.Bind("BepInEx","Async Unity",false
             ,"convert BepInEx->Unity Log to async");
-
+        //Debug
+        Debug.Verbose = _config.Bind("Debug", "Verbose", false, "Print A LOT more logs");
+        
         CleanOrphanedEntries(_config);
     }
 
@@ -105,6 +107,11 @@ internal static class PluginConfig
         public static ConfigEntry<bool> Console;
         public static ConfigEntry<bool> Disk;
         public static ConfigEntry<bool> Unity;
+    }
+
+    public static class Debug
+    {
+        public static ConfigEntry<bool> Verbose;
     }
         
     public enum ShutdownType

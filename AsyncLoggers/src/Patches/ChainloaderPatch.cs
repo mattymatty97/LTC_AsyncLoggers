@@ -34,7 +34,34 @@ internal class ChainloaderPatch
             AsyncLoggers.Log.LogError($"Exception starting {ex}");
         }
     }
-        
+
+
+    [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Initialize)), HarmonyPostfix]
+    private static void RegisterListeners()
+    {
+        foreach (var listener in Logger.Listeners)
+        {
+            switch (listener)
+            {
+                case UnityLogListener:
+                    if (!PluginConfig.BepInEx.Unity.Value)
+                        LoggerPatch.SyncListeners.Add(listener);
+                    LoggerPatch.UnfilteredListeners.Add(listener);
+                    break;
+                case DiskLogListener:
+                    if (!PluginConfig.BepInEx.Disk.Value)
+                        LoggerPatch.SyncListeners.Add(listener);
+                    LoggerPatch.TimestampedListeners.Add(listener);
+                    break;
+                case ConsoleLogListener:
+                    if (!PluginConfig.BepInEx.Console.Value)
+                        LoggerPatch.SyncListeners.Add(listener);
+                    LoggerPatch.TimestampedListeners.Add(listener);
+                    break;
+            }
+        }
+    }
+    
     [HarmonyPrefix]
     [HarmonyPatch(typeof(Logger), nameof(Logger.LogMessage))]
     private static void TrackLoadedPlugins(object data)
@@ -44,28 +71,6 @@ internal class ChainloaderPatch
             if (data is "Chainloader startup complete")
             {
                 SqliteLogger.WriteMods(Chainloader.PluginInfos.Values);
-
-                foreach (var listener in Logger.Listeners)
-                {
-                    switch (listener)
-                    {
-                        case UnityLogListener:
-                            if (!PluginConfig.BepInEx.Unity.Value)
-                                LoggerPatch.SyncListeners.Add(listener);
-                            LoggerPatch.UnfilteredListeners.Add(listener);
-                            break;
-                        case DiskLogListener:
-                            if (!PluginConfig.BepInEx.Disk.Value)
-                                LoggerPatch.SyncListeners.Add(listener);
-                            LoggerPatch.TimestampedListeners.Add(listener);
-                            break;
-                        case ConsoleLogListener:
-                            if (!PluginConfig.BepInEx.Console.Value)
-                                LoggerPatch.SyncListeners.Add(listener);
-                            LoggerPatch.TimestampedListeners.Add(listener);
-                            break;
-                    }
-                }
             }
         }
         catch (Exception ex)

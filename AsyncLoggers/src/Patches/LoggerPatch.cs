@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.LogEventArgs;
+using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using HarmonyLib;
 using Logger = BepInEx.Logging.Logger;
@@ -27,11 +28,14 @@ internal class LoggerPatch
     [HarmonyPatch(typeof(Logger), nameof(Logger.InternalLogEvent))]
     private static bool WrapLogs(object sender, LogEventArgs eventArgs)
     {
+        if (!Chainloader._initialized)
+            return true;
+        
         if (sender == AsyncLoggers.Log)
             return true;
         
         string stacktrace = null;
-        if ((eventArgs.Level & AsyncLoggers.TraceableLevelsMaks) != 0)
+        if ((eventArgs.Level & AsyncLoggers.TraceableLevelsMaks) != 0 && sender is not ManualLogSource { SourceName: "Preloader" })
         {
             stacktrace = Environment.StackTrace;
         }

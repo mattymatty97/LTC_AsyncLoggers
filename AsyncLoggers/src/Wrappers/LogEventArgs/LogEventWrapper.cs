@@ -49,4 +49,9 @@ public class LogEventWrapper : Logging.LogEventArgs
         Uuid = uuid;
         StackTrace = stackTrace;
     }
+
+    public override string ToString()
+    {
+        return base.ToString();
+    }
 }
