@@ -99,7 +99,7 @@ public static class AsyncLoggers
         
     public static void Finish()
     {
-        PluginConfig.WriteLogConfig();
+        XmlConfig.WriteLogConfig();
         
         SqliteLogger.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
             

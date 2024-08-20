@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using BepInEx.Logging;
@@ -109,9 +110,9 @@ internal static class WrapDebugs
         AsyncLoggers.VerboseLog(LogLevel.Debug,
             $"Found span:\n{string.Join("\n", instructions.Skip(startIndex).Take(endIndex - startIndex + 1))}");
 
-        var config = LogCallInfo.GetOrAdd(assembly.Name.Name, type.FullName, method.Name, logline);
+        var config = XmlConfig.LogCallInfo.GetOrAdd(assembly.Name.Name, type.FullName, method.Name, logline);
 
-        if (config.Status == LogCallInfo.CallStatus.Suppressed)
+        if (config.Status == XmlConfig.CallStatus.Suppressed)
         {
             AsyncLoggers.VerboseLog(LogLevel.Warning,$"Suppressing \"{logline}\" from {config.ClassName}:{config.MethodName}");
             var args = ((MethodReference)instruction.Operand).Parameters.Count;
@@ -121,7 +122,7 @@ internal static class WrapDebugs
                 instructions.Insert(index, Instruction.Create(OpCodes.Pop));
             }
         }
-        else if (config.Status == LogCallInfo.CallStatus.BepInEx)
+        else if (config.Status == XmlConfig.CallStatus.BepInEx)
         {
             var callReference = instruction.Operand as MethodReference;
             if (config.Delay.HasValue)
