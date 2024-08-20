@@ -2,11 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
-using System.Threading.Tasks;
 using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.Cecil;
 using AsyncLoggers.Patches;
-//using AsyncLoggers.Sqlite;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.LogEventArgs;
 using BepInEx;
@@ -23,13 +21,18 @@ public static class AsyncLoggers
     public const string NAME = "AsyncLoggers";
     public const string VERSION = "2.0.0";
     internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
+    internal static ManualLogSource WrappedUnitySource { get; } = Logger.CreateLogSource("Unity Log");
+
     private static Harmony _harmony;
         
     private static int _startTime;
-        
-    //private static Task<bool> _sqliteTask;
 
-    public static IEnumerable<string> TargetDLLs { get; } = new string[] { "Assembly-CSharp.dll" };
+    public static IEnumerable<string> TargetDLLs => GetDLLs();
+
+    private static IEnumerable<string> GetDLLs()
+    {
+        yield return "Assembly-CSharp.dll";
+    }
 
     public static void Patch(AssemblyDefinition assembly)
     {
@@ -48,8 +51,6 @@ public static class AsyncLoggers
     {
         Log.LogInfo($"{NAME} Prepatcher Started");
         PluginConfig.Init();
-
-        //_sqliteTask = SQLiteLoader.EnsureSQLite();
 
         _startTime = Environment.TickCount & Int32.MaxValue;
         if (PluginConfig.Timestamps.Enabled.Value)
@@ -98,12 +99,9 @@ public static class AsyncLoggers
         
     public static void Finish()
     {
-        //_sqliteTask.Wait();
-            
-        //if(_sqliteTask.Result)
+        PluginConfig.WriteLogConfig();
+        
         SqliteLogger.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
-        //else
-        //  SqliteLogger.Enabled = false;
             
         _harmony = new Harmony(GUID);
         _harmony.PatchAll(typeof(PreloaderConsoleListenerPatch));

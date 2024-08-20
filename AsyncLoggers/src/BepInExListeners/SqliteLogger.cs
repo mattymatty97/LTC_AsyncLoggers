@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using BepInEx;
 using SQLite;
@@ -26,6 +28,7 @@ namespace AsyncLoggers.BepInExListeners
     internal static class SqliteLogger
     {
 
+        private const string SubFolder = "sqlite_native";
         internal static bool Enabled { get; set; }
 
         internal static SQLiteConnection Connection { get; private set; }
@@ -33,7 +36,14 @@ namespace AsyncLoggers.BepInExListeners
 
         internal static void Init(string outputFile)
         {
-            Enabled = PluginConfig.DbLogger.Enabled.Value && SqliteChecker.IsLoaded();
+            const string dllFileName = "sqlite3.dll";
+            var assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            var sqliteFolderPath = Path.Combine(assemblyLocation!, SubFolder);
+            var dllPath = Path.Combine(sqliteFolderPath, dllFileName);
+
+            // Load the DLL dynamically
+            var loaded = LoadNativeDll(dllPath);
+            Enabled = loaded && PluginConfig.DbLogger.Enabled.Value && SqliteChecker.IsLoaded();
             if (PluginConfig.DbLogger.Enabled.Value)
             {
                 try
@@ -156,5 +166,23 @@ namespace AsyncLoggers.BepInExListeners
                 public string data { get; set; }
             }
         }
+        
+        private static bool LoadNativeDll(string dllPath)
+        {
+            var pDll = LoadLibrary(dllPath);
+
+            if (pDll == IntPtr.Zero)
+            {
+                AsyncLoggers.Log.LogError(
+                    $"Failed to load SQLite native DLL from path: {dllPath}. Error code: {Marshal.GetLastWin32Error()}");
+                return false;
+            }
+        
+            AsyncLoggers.Log.LogInfo("SQLite DLL loaded successfully.");
+            return true;
+        }
+        
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr LoadLibrary(string dllToLoad);
     }
 }
