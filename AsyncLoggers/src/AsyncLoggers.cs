@@ -125,10 +125,10 @@ public static class AsyncLoggers
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VerboseLog(string logline)
+    internal static void VerboseLog(LogLevel level, string logline)
     {
         if (PluginConfig.Debug.Verbose.Value)
-            Log.LogDebug(logline);
+            Log.Log(level, logline);
     }
 
     [Obsolete("RegisterIgnoredILogListener is deprecated please use RegisterSyncListener instead")]
