@@ -10,45 +10,48 @@ public static class ThrothledLogWrapper
     internal static long NextID => Interlocked.Increment(ref _currID);
 
     private static readonly ConcurrentDictionary<long, DateTime> TimestampMemory = [];
-    internal static readonly ConcurrentDictionary<long, TimeSpan> DelayMemory = [];
+    internal static readonly ConcurrentDictionary<long, TimeSpan> CooldownMemory = [];
     private static long _currID;
 
-    private static bool CanPrint(long key)
+    private static bool InCooldown(long key)
     {
         if (TimestampMemory.TryGetValue(key, out var timestamp))
         {
-            if (DateTime.UtcNow - timestamp < DelayMemory[key])
+            if (DateTime.UtcNow - timestamp < CooldownMemory[key])
             {
-                return false;
+                return true;
             }
         }
         
         TimestampMemory[key] = DateTime.UtcNow;
         
-        return true;
+        return false;
     }
     
     
     // Method for logs without context
     public static void LogInfo(long logKey, string message)
     {
-        // Replace with BepInEx logging implementation
-        if(CanPrint(logKey))
-            AsyncLoggers.WrappedUnitySource.LogInfo(message);
+        if(InCooldown(logKey))
+            return;
+        
+        AsyncLoggers.WrappedUnitySource.LogInfo(message);
     }
 
     public static void LogError(long logKey, string message)
     {
-        // Replace with BepInEx logging implementation
-        if(CanPrint(logKey))
-            AsyncLoggers.WrappedUnitySource.LogError(message);
+        if (InCooldown(logKey)) 
+            return;
+        
+        AsyncLoggers.WrappedUnitySource.LogError(message);
     }
 
     public static void LogWarning(long logKey, string message)
     {
-        // Replace with BepInEx logging implementation
-        if(CanPrint(logKey))
-            AsyncLoggers.WrappedUnitySource.LogWarning(message);
+        if(InCooldown(logKey))
+            return;
+        
+        AsyncLoggers.WrappedUnitySource.LogWarning(message);
     }
     
     public static void LogInfoFormat(long logKey, string format, params object[] args)

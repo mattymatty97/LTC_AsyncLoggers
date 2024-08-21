@@ -124,10 +124,18 @@ public static class AsyncLoggers
         SqliteLogger.Terminate(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static void VerboseCecilLog(LogLevel level, string logline)
+    {
+        if (PluginConfig.Debug.VerboseCecil.Value)
+            Log.Log(level, logline);
+    }
+    
+    [MethodImpl(MethodImplOptions.NoInlining)]
     internal static void VerboseLog(LogLevel level, string logline)
     {
-        if (PluginConfig.Debug.Verbose.Value)
+        //TODO: Add config for this logtype
+        //if (PluginConfig.Debug.VerboseCecil.Value)
             Log.Log(level, logline);
     }
 

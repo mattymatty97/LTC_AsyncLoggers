@@ -1,4 +1,5 @@
-﻿using BepInEx.Logging;
+﻿using System;
+using BepInEx.Logging;
 
 namespace AsyncLoggers.Cecil;
 
@@ -7,19 +8,16 @@ public static class LogWrapper
     // Method for logs without context
     public static void LogInfo(string message)
     {
-        // Replace with BepInEx logging implementation
         AsyncLoggers.WrappedUnitySource.LogInfo(message);
     }
 
     public static void LogError(string message)
     {
-        // Replace with BepInEx logging implementation
         AsyncLoggers.WrappedUnitySource.LogError(message);
     }
 
     public static void LogWarning(string message)
     {
-        // Replace with BepInEx logging implementation
         AsyncLoggers.WrappedUnitySource.LogWarning(message);
     }
     

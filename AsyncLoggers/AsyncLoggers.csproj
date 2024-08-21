@@ -25,15 +25,13 @@
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.dll" Publicize="true"/>
         <Reference Include="$(ProfileDirectory)\BepInEx\core\BepInEx.dll" Publicize="true"/>
         <Reference Include="$(ProfileDirectory)\BepInEx\core\BepInEx.Preloader.dll" Publicize="true"/>
-
-
+        
+        <!-- clean referencing -->
         <Reference Include="$(GameDirectory)\Lethal Company_Data\Managed\UnityEngine.UnityWebRequestModule.dll" Publicize="false"/>
         <Reference Include="$(ProfileDirectory)\BepInEx\core\Mono.Cecil.dll" Publicize="false"/>
         <Reference Include="$(ProfileDirectory)\BepInEx\core\Mono.Cecil.Rocks.dll" Publicize="false"/>
         <Reference Include="$(ProfileDirectory)\BepInEx\core\0Harmony.dll" Publicize="false"/>
         <Reference Include="$(ProfileDirectory)\BepInEx\core\BepInEx.Harmony.dll" Publicize="false"/>
-
-        <!-- clean referencing -->
     </ItemGroup>
     <Import Project="PostBuildEvents.targets"/>
 	<!-- Embedded Debug -->
