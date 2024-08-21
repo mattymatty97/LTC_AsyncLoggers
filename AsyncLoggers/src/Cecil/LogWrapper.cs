@@ -3,17 +3,17 @@
 public static class LogWrapper
 {
     // Method for logs without context
-    public static void LogInfo(string message)
+    public static void LogInfo(object message)
     {
         AsyncLoggers.WrappedUnitySource.LogInfo(message);
     }
 
-    public static void LogError(string message)
+    public static void LogError(object message)
     {
         AsyncLoggers.WrappedUnitySource.LogError(message);
     }
 
-    public static void LogWarning(string message)
+    public static void LogWarning(object message)
     {
         AsyncLoggers.WrappedUnitySource.LogWarning(message);
     }
@@ -37,19 +37,19 @@ public static class LogWrapper
     }
 
     // Method for logs with context
-    public static void LogInfoWithContext(string message, object context)
+    public static void LogInfoWithContext(object message, object context)
     {
         var formattedMessage = FormatMessageWithContext(message, context);
         LogInfo(formattedMessage);
     }
 
-    public static void LogErrorWithContext(string message, object context)
+    public static void LogErrorWithContext(object message, object context)
     {
         var formattedMessage = FormatMessageWithContext(message, context);
         LogError(formattedMessage);
     }
 
-    public static void LogWarningWithContext(string message, object context)
+    public static void LogWarningWithContext(object message, object context)
     {
         var formattedMessage = FormatMessageWithContext(message, context);
         LogWarning(formattedMessage);
@@ -74,7 +74,7 @@ public static class LogWrapper
     }
 
     // Helper method for formatting messages
-    private static string FormatMessageWithContext(string message, object context)
+    private static string FormatMessageWithContext(object message, object context)
     {
         return $"{message} (Context: {context})";
     }

@@ -1,3 +1,6 @@
+# v2.0.2
+- WIP
+
 # v2.0.1
 - fix wrong defaults
 

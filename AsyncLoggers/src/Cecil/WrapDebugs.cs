@@ -14,6 +14,143 @@ namespace AsyncLoggers.Cecil;
 
 internal static class WrapDebugs
 {
+    private class LogRedirects
+    {
+        private readonly ModuleDefinition _moduleDefinition;
+        private readonly Type _redirectType;
+
+        private MethodReference _logInfoMethod;
+        private MethodReference _logErrorMethod;
+        private MethodReference _logWarningMethod;
+
+        private MethodReference _logInfoWithContextMethod;
+        private MethodReference _logErrorWithContextMethod;
+        private MethodReference _logWarningWithContextMethod;
+
+        private MethodReference _logInfoFormatMethod;
+        private MethodReference _logErrorFormatMethod;
+        private MethodReference _logWarningFormatMethod;
+
+        private MethodReference _logInfoFormatWithContextMethod;
+        private MethodReference _logErrorFormatWithContextMethod;
+        private MethodReference _logWarningFormatWithContextMethod;
+
+        public MethodReference LOGInfoMethod
+        {
+            get
+            {
+                _logInfoMethod ??=
+                    _moduleDefinition.ImportReference(
+                        AccessTools.Method(_redirectType, "LogInfo"));
+                return _logInfoMethod;
+            }
+        }
+
+        public MethodReference LOGErrorMethod
+        {
+            get
+            {
+                _logErrorMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogError"));
+                return _logErrorMethod;
+            }
+        }
+
+        public MethodReference LOGWarningMethod
+        {
+            get
+            {
+                _logWarningMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogWarning"));
+                return _logWarningMethod;
+            }
+        }
+
+        public MethodReference LOGInfoWithContextMethod
+        {
+            get
+            {
+                _logInfoWithContextMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogInfoWithContext"));
+                return _logInfoWithContextMethod;
+            }
+        }
+
+        public MethodReference LOGErrorWithContextMethod
+        {
+            get { _logErrorWithContextMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogErrorWithContext"));
+                return _logErrorWithContextMethod; }
+        }
+
+        public MethodReference LOGWarningWithContextMethod
+        {
+            get { _logWarningWithContextMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogWarningWithContext"));
+                return _logWarningWithContextMethod; }
+        }
+
+        public MethodReference LOGInfoFormatMethod
+        {
+            get { _logInfoFormatMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogInfoFormat"));
+                return _logInfoFormatMethod; }
+        }
+
+        public MethodReference LOGErrorFormatMethod
+        {
+            get { _logErrorFormatMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogErrorFormat"));
+                return _logErrorFormatMethod; }
+        }
+
+        public MethodReference LOGWarningFormatMethod
+        {
+            get { _logWarningFormatMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogWarningFormat"));
+                return _logWarningFormatMethod; }
+        }
+
+        public MethodReference LOGInfoFormatWithContextMethod
+        {
+            get { _logInfoFormatWithContextMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogInfoFormatWithContext"));
+                return _logInfoFormatWithContextMethod; }
+        }
+
+        public MethodReference LOGErrorFormatWithContextMethod
+        {
+            get { _logErrorFormatWithContextMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogErrorFormatWithContext"));
+                return _logErrorFormatWithContextMethod; }
+        }
+
+        public MethodReference LOGWarningFormatWithContextMethod
+        {
+            get { _logWarningFormatWithContextMethod ??=
+                    _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
+                        "LogWarningFormatWithContext"));
+                return _logWarningFormatWithContextMethod; }
+        }
+
+        internal LogRedirects(ModuleDefinition moduleDefinition, Type redirectType)
+        {
+            _moduleDefinition = moduleDefinition;
+            _redirectType = redirectType;
+        }
+    }
+
+
     internal static void ProcessAssembly(AssemblyDefinition assembly)
     {
         foreach (var moduleDefinition in assembly.Modules)
@@ -24,21 +161,23 @@ internal static class WrapDebugs
 
     private static void ProcessModule(AssemblyDefinition assembly, ModuleDefinition module)
     {
+        var normalRedirects = new LogRedirects(module, typeof(LogWrapper));
+        var throttledRedirects = new LogRedirects(module, typeof(ThrothledLogWrapper));
         foreach (var typeDefinition in module.Types)
         {
-            ProcessType(assembly, typeDefinition);
+            ProcessType(assembly, typeDefinition, normalRedirects, throttledRedirects);
         }
     }
 
-    private static void ProcessType(AssemblyDefinition assembly, TypeDefinition type)
+    private static void ProcessType(AssemblyDefinition assembly, TypeDefinition type, LogRedirects normalRedirects, LogRedirects throttledRedirects)
     {
         foreach (var methodDefinition in type.Methods)
         {
-            ProcessMethod(assembly, type, methodDefinition);
+            ProcessMethod(assembly, type, methodDefinition, normalRedirects, throttledRedirects);
         }
     }
 
-    private static void ProcessMethod(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method)
+    private static void ProcessMethod(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method, LogRedirects normalRedirects, LogRedirects throttledRedirects)
     {
         if (!method.HasBody)
             return;
@@ -59,7 +198,7 @@ internal static class WrapDebugs
                     // Check if the instruction is inside a catch block
                     if (!IsInsideCatchBlock(instruction, exceptionHandlers))
                     {
-                        HandleLogCall(assembly, type, method, ref instructions, ref i);
+                        HandleLogCall(assembly, type, method, normalRedirects, throttledRedirects, ref instructions, ref i);
                     }
                 }
             }
@@ -85,7 +224,7 @@ internal static class WrapDebugs
     }
 
 
-    private static void HandleLogCall(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method,
+    private static void HandleLogCall(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method, LogRedirects normalRedirects, LogRedirects throttledRedirects,
         ref Collection<Instruction> instructions, ref int index)
     {
         var endIndex = index;
@@ -114,7 +253,8 @@ internal static class WrapDebugs
 
         if (config.Status == XmlConfig.CallStatus.Suppressed)
         {
-            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,$"Suppressing \"{logline}\" from {config.ClassName}:{config.MethodName}");
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,
+                $"Suppressing \"{logline}\" from {config.ClassName}:{config.MethodName}");
             var args = ((MethodReference)instruction.Operand).Parameters.Count;
             instructions[index] = Instruction.Create(OpCodes.Pop);
             for (var i = 1; i < args; i++)
@@ -127,21 +267,22 @@ internal static class WrapDebugs
             var callReference = instruction.Operand as MethodReference;
             if (config.Cooldown.HasValue)
             {
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,$"Throttling \"{logline}\" from {config.ClassName}:{config.MethodName}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,
+                    $"Throttling \"{logline}\" from {config.ClassName}:{config.MethodName}");
                 var logKey = ThrothledLogWrapper.NextID;
                 ThrothledLogWrapper.CooldownMemory[logKey] = TimeSpan.FromMilliseconds(config.Cooldown.Value);
-                ReplaceCallWithThrothledBepIn(method, instructions, ref index, ref startIndex, callReference, logKey);
+                ReplaceCallWithThrothledBepIn(method, throttledRedirects, instructions, ref index, ref startIndex, callReference, logKey);
             }
             else
             {
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,$"Wrapping \"{logline}\" from {config.ClassName}:{config.MethodName}");
-                ReplaceCallWithBepIn(method, instructions, ref index, callReference);
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,
+                    $"Wrapping \"{logline}\" from {config.ClassName}:{config.MethodName}");
+                ReplaceCallWithBepIn(method, normalRedirects, instructions, ref index, callReference);
             }
-            
+
             AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
                 $"Modified span:\n{string.Join("\n", instructions.Skip(startIndex).Take(index - startIndex + 1))}");
         }
-        
     }
 
     private static int FindFirstInstruction(MethodDefinition target, int index, LinkedList<string> arguments,
@@ -495,29 +636,11 @@ internal static class WrapDebugs
 
         return null;
     }
-    
 
-    private static void ReplaceCallWithBepIn(MethodDefinition method, Collection<Instruction> instructions,
+
+    private static void ReplaceCallWithBepIn(MethodDefinition method, LogRedirects redirects, Collection<Instruction> instructions,
         ref int index, MethodReference methodRef)
     {
-        // Import wrapper methods
-        var logInfoMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogInfo)));
-        var logErrorMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogError)));
-        var logWarningMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogWarning)));
-
-        var logInfoWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogInfoWithContext)));
-        var logErrorWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogErrorWithContext)));
-        var logWarningWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogWarningWithContext)));
-
-        var logInfoFormatMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogInfoFormat)));
-        var logErrorFormatMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogErrorFormat)));
-        var logWarningFormatMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogWarningFormat)));
-        
-        var logInfoFormatWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogInfoFormatWithContext)));
-        var logErrorFormatWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogErrorFormatWithContext)));
-        var logWarningFormatWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(LogWrapper),nameof(LogWrapper.LogWarningFormatWithContext)));
-
-
         var instruction = instructions[index];
         MethodReference replacementMethod = null;
         var parametersCount = methodRef.Parameters.Count;
@@ -525,22 +648,22 @@ internal static class WrapDebugs
         switch (methodRef.Name)
         {
             case "Log":
-                replacementMethod = parametersCount > 1 ? logInfoWithContextMethod : logInfoMethod;
+                replacementMethod = parametersCount > 1 ? redirects.LOGInfoWithContextMethod : redirects.LOGInfoMethod;
                 break;
             case "LogError":
-                replacementMethod = parametersCount > 1 ? logErrorWithContextMethod : logErrorMethod;
+                replacementMethod = parametersCount > 1 ? redirects.LOGErrorWithContextMethod : redirects.LOGErrorMethod;
                 break;
             case "LogWarning":
-                replacementMethod = parametersCount > 1 ? logWarningWithContextMethod : logWarningMethod;
+                replacementMethod = parametersCount > 1 ? redirects.LOGWarningWithContextMethod : redirects.LOGWarningMethod;
                 break;
             case "LogFormat":
-                replacementMethod = parametersCount > 2 ? logInfoFormatWithContextMethod : logInfoFormatMethod;
+                replacementMethod = parametersCount > 2 ? redirects.LOGInfoFormatWithContextMethod : redirects.LOGInfoFormatMethod;
                 break;
             case "LogErrorFormat":
-                replacementMethod = parametersCount > 2 ? logErrorFormatWithContextMethod : logErrorFormatMethod;
+                replacementMethod = parametersCount > 2 ? redirects.LOGErrorFormatWithContextMethod : redirects.LOGErrorFormatMethod;
                 break;
             case "LogWarningFormat":
-                replacementMethod = parametersCount > 2 ? logWarningFormatWithContextMethod : logWarningFormatMethod;
+                replacementMethod = parametersCount > 2 ? redirects.LOGWarningFormatWithContextMethod : redirects.LOGWarningFormatMethod;
                 break;
         }
 
@@ -552,28 +675,11 @@ internal static class WrapDebugs
             ilProcessor.Replace(instruction, Instruction.Create(OpCodes.Call, replacementMethod));
         }
     }
-    
-    private static void ReplaceCallWithThrothledBepIn(MethodDefinition method, Collection<Instruction> instructions,
+
+    private static void ReplaceCallWithThrothledBepIn(MethodDefinition method, LogRedirects redirects, Collection<Instruction> instructions,
         ref int index, ref int startIndex, MethodReference methodRef, long logkey)
     {
-        // Import wrapper methods
-        var logInfoMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogInfo)));
-        var logErrorMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogError)));
-        var logWarningMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogWarning)));
-
-        var logInfoWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogInfoWithContext)));
-        var logErrorWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogErrorWithContext)));
-        var logWarningWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogWarningWithContext)));
-
-        var logInfoFormatMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogInfoFormat)));
-        var logErrorFormatMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogErrorFormat)));
-        var logWarningFormatMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogWarningFormat)));
         
-        var logInfoFormatWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogInfoFormatWithContext)));
-        var logErrorFormatWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogErrorFormatWithContext)));
-        var logWarningFormatWithContextMethod = method.Module.ImportReference(AccessTools.Method(typeof(ThrothledLogWrapper),nameof(LogWrapper.LogWarningFormatWithContext)));
-
-
         var instruction = instructions[index];
         MethodReference replacementMethod = null;
         var parametersCount = methodRef.Parameters.Count;
@@ -581,37 +687,37 @@ internal static class WrapDebugs
         switch (methodRef.Name)
         {
             case "Log":
-                replacementMethod = parametersCount > 1 ? logInfoWithContextMethod : logInfoMethod;
+                replacementMethod = parametersCount > 1 ? redirects.LOGInfoWithContextMethod : redirects.LOGInfoMethod;
                 break;
             case "LogError":
-                replacementMethod = parametersCount > 1 ? logErrorWithContextMethod : logErrorMethod;
+                replacementMethod = parametersCount > 1 ? redirects.LOGErrorWithContextMethod : redirects.LOGErrorMethod;
                 break;
             case "LogWarning":
-                replacementMethod = parametersCount > 1 ? logWarningWithContextMethod : logWarningMethod;
+                replacementMethod = parametersCount > 1 ? redirects.LOGWarningWithContextMethod : redirects.LOGWarningMethod;
                 break;
             case "LogFormat":
-                replacementMethod = parametersCount > 2 ? logInfoFormatWithContextMethod : logInfoFormatMethod;
+                replacementMethod = parametersCount > 2 ? redirects.LOGInfoFormatWithContextMethod : redirects.LOGInfoFormatMethod;
                 break;
             case "LogErrorFormat":
-                replacementMethod = parametersCount > 2 ? logErrorFormatWithContextMethod : logErrorFormatMethod;
+                replacementMethod = parametersCount > 2 ? redirects.LOGErrorFormatWithContextMethod : redirects.LOGErrorFormatMethod;
                 break;
             case "LogWarningFormat":
-                replacementMethod = parametersCount > 2 ? logWarningFormatWithContextMethod : logWarningFormatMethod;
+                replacementMethod = parametersCount > 2 ? redirects.LOGWarningFormatWithContextMethod : redirects.LOGWarningFormatMethod;
                 break;
         }
 
         if (replacementMethod != null)
         {
             // Replace the original Debug method call with the wrapper method
-            
+
             var ilProcessor = method.Body.GetILProcessor();
 
             var startInstruction = instructions[startIndex];
-            
+
             ilProcessor.InsertBefore(startInstruction, Instruction.Create(OpCodes.Ldc_I8, logkey));
             startIndex--;
             index++;
-            
+
             ilProcessor.Replace(instruction, Instruction.Create(OpCodes.Call, replacementMethod));
         }
     }

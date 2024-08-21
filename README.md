@@ -16,7 +16,7 @@ the more logs your modpack generates the bigger the impact this mod has!
 Reduce logs from mods by specifying a LogLevel for each LogSource
 
 ### Unity Log wrapping:
-Detect calls to `Unity.Debug` inside the game assemblies and allow users to tweak them
+Detect calls to `Unity.Debug` inside the game assemblies and allow users to tweak them  
 Note: Has to be enabled in the config `LogWrapping.Enabled`
 
 # For the Developers:

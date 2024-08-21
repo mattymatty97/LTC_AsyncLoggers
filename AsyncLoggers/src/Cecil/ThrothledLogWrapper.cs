@@ -30,7 +30,7 @@ public static class ThrothledLogWrapper
     
     
     // Method for logs without context
-    public static void LogInfo(long logKey, string message)
+    public static void LogInfo(long logKey, object message)
     {
         if(InCooldown(logKey))
             return;
@@ -38,7 +38,7 @@ public static class ThrothledLogWrapper
         AsyncLoggers.WrappedUnitySource.LogInfo(message);
     }
 
-    public static void LogError(long logKey, string message)
+    public static void LogError(long logKey, object message)
     {
         if (InCooldown(logKey)) 
             return;
@@ -46,7 +46,7 @@ public static class ThrothledLogWrapper
         AsyncLoggers.WrappedUnitySource.LogError(message);
     }
 
-    public static void LogWarning(long logKey, string message)
+    public static void LogWarning(long logKey, object message)
     {
         if(InCooldown(logKey))
             return;
@@ -73,19 +73,19 @@ public static class ThrothledLogWrapper
     }
 
     // Method for logs with context
-    public static void LogInfoWithContext(long logKey, string message, object context)
+    public static void LogInfoWithContext(long logKey, object message, object context)
     {
         var formattedMessage = FormatMessageWithContext(message, context);
         LogInfo(logKey, formattedMessage);
     }
 
-    public static void LogErrorWithContext(long logKey, string message, object context)
+    public static void LogErrorWithContext(long logKey, object message, object context)
     {
         var formattedMessage = FormatMessageWithContext(message, context);
         LogError(logKey, formattedMessage);
     }
 
-    public static void LogWarningWithContext(long logKey, string message, object context)
+    public static void LogWarningWithContext(long logKey, object message, object context)
     {
         var formattedMessage = FormatMessageWithContext(message, context);
         LogWarning(logKey, formattedMessage);
@@ -110,7 +110,7 @@ public static class ThrothledLogWrapper
     }
 
     // Helper method for formatting messages
-    private static string FormatMessageWithContext(string message, object context)
+    private static string FormatMessageWithContext(object message, object context)
     {
         return $"{message} (Context: {context})";
     }

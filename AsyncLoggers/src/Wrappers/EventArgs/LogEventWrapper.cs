@@ -3,19 +3,19 @@ using System.Threading;
 using BepInEx.Logging;
 using Logging = BepInEx.Logging;
 
-namespace AsyncLoggers.Wrappers.LogEventArgs;
+namespace AsyncLoggers.Wrappers.EventArgs;
 
 public class LogEventWrapper : Logging.LogEventArgs
 {
     private static long _logCounter = 0L;
     
-    public readonly DateTime Timestamp;
+    public DateTime Timestamp { get; }
     
-    public readonly string AppTimestamp;
+    public string AppTimestamp { get; }
 
-    public readonly long Uuid;
+    public long Uuid { get; }
 
-    public readonly string StackTrace;
+    public string StackTrace { get; internal set; }
 
     private bool? _isFiltered;
     
@@ -34,9 +34,8 @@ public class LogEventWrapper : Logging.LogEventArgs
         return (Level & sourceMask) == 0;
     }
 
-    public LogEventWrapper(object data, LogLevel level, ILogSource source, string stackTrace = null) : base(data, level, source)
+    internal LogEventWrapper(LogEventArgs eventArgs) : base(eventArgs.Data, eventArgs.Level, eventArgs.Source)
     {
-        StackTrace = stackTrace;
         Timestamp = DateTime.UtcNow;
         Uuid = Interlocked.Increment(ref _logCounter);
         AppTimestamp = AsyncLoggers.GetLogTimestamp(this).ToString();

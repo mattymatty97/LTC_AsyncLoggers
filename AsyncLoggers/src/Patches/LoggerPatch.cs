@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using AsyncLoggers.Wrappers;
-using AsyncLoggers.Wrappers.LogEventArgs;
+using AsyncLoggers.Wrappers.EventArgs;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -40,9 +40,8 @@ internal class LoggerPatch
             stacktrace = Environment.StackTrace;
         }
         
-        var wrappedEvent = new LogEventWrapper(eventArgs.Data, eventArgs.Level, eventArgs.Source, stacktrace);
-        var timestampedEvent = PluginConfig.Timestamps.Enabled.Value ?
-        new TimestampedLogEventArg(wrappedEvent) : wrappedEvent;
+        var wrappedEvent = eventArgs.AsLogEventWrapper();
+        var timestampedEvent = PluginConfig.Timestamps.Enabled.Value ? wrappedEvent.AsTimestampedLogEventArg() : wrappedEvent;
 
         foreach (var listener in SyncListeners)
         {
@@ -68,8 +67,8 @@ internal class LoggerPatch
 
     private static void HandleLogEvent(object sender, LogEventArgs eventArgs)
     {
-        var wrappedEventArgs = (LogEventWrapper)eventArgs;
-        var timestampedEvent = PluginConfig.Timestamps.Enabled.Value ? new TimestampedLogEventArg(wrappedEventArgs) : eventArgs;
+        var wrappedEventArgs = eventArgs.AsLogEventWrapper();
+        var timestampedEvent = PluginConfig.Timestamps.Enabled.Value ? wrappedEventArgs.AsTimestampedLogEventArg() : wrappedEventArgs;
         try
         {
             var list = new LinkedList<ILogListener>(Logger.Listeners.Where(l => !SyncListeners.Contains(l)));

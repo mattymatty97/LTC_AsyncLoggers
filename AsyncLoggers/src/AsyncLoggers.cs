@@ -6,7 +6,7 @@ using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.Cecil;
 using AsyncLoggers.Patches;
 using AsyncLoggers.Wrappers;
-using AsyncLoggers.Wrappers.LogEventArgs;
+using AsyncLoggers.Wrappers.EventArgs;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -19,7 +19,7 @@ public static class AsyncLoggers
 {
     public const string GUID = "mattymatty.AsyncLoggers";
     public const string NAME = "AsyncLoggers";
-    public const string VERSION = "2.0.1";
+    public const string VERSION = "2.0.2";
     internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
     internal static ManualLogSource WrappedUnitySource { get; } = Logger.CreateLogSource("Unity Log");
 
@@ -135,7 +135,7 @@ public static class AsyncLoggers
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static void VerboseLogWrappingLog(LogLevel level, string logline)
     {
-        if ((PluginConfig.Debug.LogWrappingVerbosity.Value & level) != 0)
+        if ((level & PluginConfig.Debug.LogWrappingVerbosity.Value) != 0)
             Log.Log(level, logline);
     }
     

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using AsyncLoggers.Wrappers;
-using AsyncLoggers.Wrappers.LogEventArgs;
+using AsyncLoggers.Wrappers.EventArgs;
 using BepInEx.Logging;
 using SQLite;
 using LogEventArgs = BepInEx.Logging.LogEventArgs;
