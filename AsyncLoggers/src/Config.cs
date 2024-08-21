@@ -334,7 +334,7 @@ internal static class FilterConfig
 
         var sectionName = Regex.Replace(sourceName, @"[\n\t\\\'[\]]", "");
 
-        var enabled = PluginConfig.FilterConfig.Bind(sectionName, "Enabled", true,
+        var enabled = PluginConfig.FilterConfig.Bind(sectionName, "Enabled", false,
             new ConfigDescription("Allow source to write logs"));
 
         var logLevel = PluginConfig.FilterConfig.Bind(sectionName, "LogLevels", LogLevel.All,
@@ -366,8 +366,8 @@ internal static class PluginConfig
 
         //Initialize Configs
         //LogWrapping
-        LogWrapping.Enabled = _config.Bind("LogWraping", "Enabled", true, new ConfigDescription("Look into game assemblies and tweak calls to Unity.Debug"));
-        LogWrapping.TargetAssemblies = _config.Bind("LogWraping", "Target Assemblies", "Assembly-CSharp.dll", new ConfigDescription("Which Assemblies to look into\nListSeparator=,"));
+        LogWrapping.Enabled = _config.Bind("LogWrapping", "Enabled", true, new ConfigDescription("Look into game assemblies and tweak calls to Unity.Debug"));
+        LogWrapping.TargetAssemblies = _config.Bind("LogWrapping", "Target Assemblies", "Assembly-CSharp.dll", new ConfigDescription("Which Assemblies to look into\nListSeparator=,"));
         //Timestamps
         Timestamps.Enabled = _config.Bind("Timestamps", "Enabled", true
             , "add numeric timestamps to the logs");

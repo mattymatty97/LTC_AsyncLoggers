@@ -9,15 +9,15 @@ Async Loggers
 # For the users:
 
 ### Async Logs:
-remove any log related delays by processing them separately from the game stuff.
+remove any log related lag by processing them separately from the game stuff.
 the more logs your modpack generates the bigger the impact this mod has!
 
 ### Log Level filter:
-Limit logs from mods by specifying a LogLevel for each one of them
+Reduce logs from mods by specifying a LogLevel for each LogSource
 
 ### Unity Log wrapping:
 Detect calls to `Unity.Debug` inside the game assemblies and allow users to tweak them
-
+Note: Has to be enabled in the config `LogWrapping.Enabled`
 
 # For the Developers:
 the main class `AsyncLoggers.AsyncLoggers` contains 4 methods to register your own `LogListener` into AsyncLoggers system:
@@ -36,13 +36,3 @@ public static bool UnRegisterUnfilteredListener(ILogListener listener)
 public static bool RegisterTimestampedListener(ILogListener listener)
 public static bool UnRegisterTimestampedListener(ILogListener listener)
 ```
-
-Installation
-------------
-
-- Install BepInEx and run it once
-- Unzip this mod into your `BepInEx/plugins` folder
-- <u>Move</u> the files inside the mods `/BepInEx/patchers` folder into <u>your</u> `BepInEx/patchers` folder
-
-Or let a mod manager handle the installation for you.
-
