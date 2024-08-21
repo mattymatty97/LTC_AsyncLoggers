@@ -95,7 +95,7 @@ internal static class WrapDebugs
 
         var methodName = method.Name;
 
-        AsyncLoggers.VerboseCecilLog(LogLevel.Info,
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Info,
             $"Method {typeName}:{methodName} has Log call at IL_{instruction.Offset:x4}.");
 
         var logDescription = new LinkedList<string>();
@@ -104,17 +104,17 @@ internal static class WrapDebugs
 
         var logline = string.Join(", ", logDescription);
 
-        AsyncLoggers.VerboseCecilLog(LogLevel.Info,
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Info,
             $"Method {typeName}:{methodName} has Log named \"{logline}\"");
 
-        AsyncLoggers.VerboseCecilLog(LogLevel.Debug,
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
             $"Found span:\n{string.Join("\n", instructions.Skip(startIndex).Take(endIndex - startIndex + 1))}");
 
         var config = XmlConfig.LogCallInfo.GetOrAdd(assembly.Name.Name, type.FullName, method.Name, logline);
 
         if (config.Status == XmlConfig.CallStatus.Suppressed)
         {
-            AsyncLoggers.VerboseCecilLog(LogLevel.Warning,$"Suppressing \"{logline}\" from {config.ClassName}:{config.MethodName}");
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,$"Suppressing \"{logline}\" from {config.ClassName}:{config.MethodName}");
             var args = ((MethodReference)instruction.Operand).Parameters.Count;
             instructions[index] = Instruction.Create(OpCodes.Pop);
             for (var i = 1; i < args; i++)
@@ -127,18 +127,18 @@ internal static class WrapDebugs
             var callReference = instruction.Operand as MethodReference;
             if (config.Cooldown.HasValue)
             {
-                AsyncLoggers.VerboseCecilLog(LogLevel.Warning,$"Throttling \"{logline}\" from {config.ClassName}:{config.MethodName}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,$"Throttling \"{logline}\" from {config.ClassName}:{config.MethodName}");
                 var logKey = ThrothledLogWrapper.NextID;
                 ThrothledLogWrapper.CooldownMemory[logKey] = TimeSpan.FromMilliseconds(config.Cooldown.Value);
                 ReplaceCallWithThrothledBepIn(method, instructions, ref index, ref startIndex, callReference, logKey);
             }
             else
             {
-                AsyncLoggers.VerboseCecilLog(LogLevel.Warning,$"Wrapping \"{logline}\" from {config.ClassName}:{config.MethodName}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,$"Wrapping \"{logline}\" from {config.ClassName}:{config.MethodName}");
                 ReplaceCallWithBepIn(method, instructions, ref index, callReference);
             }
             
-            AsyncLoggers.VerboseCecilLog(LogLevel.Debug,
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
                 $"Modified span:\n{string.Join("\n", instructions.Skip(startIndex).Take(index - startIndex + 1))}");
         }
         
@@ -160,14 +160,14 @@ internal static class WrapDebugs
         var operand = instruction.Operand;
 
         // Log the start of processing for the current instruction
-        AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: Starting");
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: Starting");
 
         try
         {
             // If the instruction is a prefix, ignore it and recurse on the previous instruction
             if (opCode.OpCodeType == OpCodeType.Prefix)
             {
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction} is a Prefix ignoring!");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction} is a Prefix ignoring!");
                 return FindFirstInstruction(target, index - 1, arguments);
             }
 
@@ -190,7 +190,7 @@ internal static class WrapDebugs
                 // Initialize a list to store arguments for this method call
                 var args = new LinkedList<string>();
 
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: has {argumentCount} arguments");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: has {argumentCount} arguments");
 
                 // Recursively find and process arguments for the method call
                 for (int i = 0; i < argumentCount; i++)
@@ -200,12 +200,12 @@ internal static class WrapDebugs
                     args.AddFirst(string.Join(".", argumentDescriptions));
                 }
 
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: startIndex {lastIndex}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: startIndex {lastIndex}");
 
                 // If this is not the root call and the method returns void, continue searching
                 if (!isRoot && method.ReturnType.MetadataType == MetadataType.Void)
                 {
-                    AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
                     lastIndex = FindFirstInstruction(target, lastIndex - 1, arguments);
                     return lastIndex;
                 }
@@ -221,13 +221,13 @@ internal static class WrapDebugs
             // Handle stack behavior - instructions that don't pop but push to the stack
             if (opCode.StackBehaviourPop == StackBehaviour.Pop0 && opCode.StackBehaviourPush != StackBehaviour.Push0)
             {
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: startIndex {index} is Ld*");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: startIndex {index} is Ld*");
                 retIndex = index;
             }
             // Handle NOP instructions
             else if (opCode is { StackBehaviourPop: StackBehaviour.Pop0, StackBehaviourPush: StackBehaviour.Push0 })
             {
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: is Nop");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: is Nop");
                 retIndex = null;
             }
             else
@@ -307,7 +307,7 @@ internal static class WrapDebugs
         {
             case StackBehaviour.Pop1 or StackBehaviour.Popi or StackBehaviour.Popref:
             {
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: has 1 param");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: has 1 param");
 
                 // Create a list to hold sub-arguments processed from previous instructions
                 LinkedList<string> subArguments = new LinkedList<string>();
@@ -315,12 +315,12 @@ internal static class WrapDebugs
                 // Recursively find and process the previous instruction
                 var startIndex = FindFirstInstruction(target, index - 1, subArguments);
 
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: startIndex {startIndex}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: startIndex {startIndex}");
 
                 // If not root and no value is pushed, continue searching backwards
                 if (!isRoot && opCode.StackBehaviourPush == StackBehaviour.Push0)
                 {
-                    AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
                     retIndex = null;
                 }
                 else
@@ -339,7 +339,7 @@ internal static class WrapDebugs
             case StackBehaviour.Pop1_pop1 or StackBehaviour.Popi_pop1 or StackBehaviour.Popi_popi
                 or StackBehaviour.Popref_pop1 or StackBehaviour.Popref_popi:
             {
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: has 2 param");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: has 2 param");
                 var lastIndex = index;
                 LinkedList<string> subArguments = new LinkedList<string>();
 
@@ -351,12 +351,12 @@ internal static class WrapDebugs
                 // Process the second parameter
                 lastIndex = FindFirstInstruction(target, lastIndex - 1, subArguments);
 
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: startIndex {lastIndex}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: startIndex {lastIndex}");
 
                 // If not root and no value is pushed, continue searching backwards
                 if (!isRoot && opCode.StackBehaviourPush == StackBehaviour.Push0)
                 {
-                    AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
                     retIndex = null;
                 }
                 else
@@ -384,7 +384,7 @@ internal static class WrapDebugs
             }
             case StackBehaviour.Popi_popi_popi or StackBehaviour.Popref_popi_popi or StackBehaviour.Popref_popi_popref:
             {
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: has 3 param");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: has 3 param");
                 var lastIndex = index;
                 LinkedList<string> subArguments = new LinkedList<string>();
                 LinkedList<string> indexArgs = new LinkedList<string>();
@@ -401,12 +401,12 @@ internal static class WrapDebugs
                 lastIndex = FindFirstInstruction(target, lastIndex - 1, subArguments);
                 indexArgs.AddFirst(string.Join(".", subArguments));
 
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: startIndex {lastIndex}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: startIndex {lastIndex}");
 
                 // If not root and no value is pushed, continue searching backwards
                 if (!isRoot && opCode.StackBehaviourPush == StackBehaviour.Push0)
                 {
-                    AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
                     retIndex = null;
                 }
                 else

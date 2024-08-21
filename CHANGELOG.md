@@ -1,3 +1,6 @@
+# v2.0.1
+- fix wrong defaults
+
 # v2.0.0
 - remove DBAPI
 - add some api to handle custom ILogListeners

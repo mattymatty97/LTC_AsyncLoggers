@@ -334,7 +334,7 @@ internal static class FilterConfig
 
         var sectionName = Regex.Replace(sourceName, @"[\n\t\\\'[\]]", "");
 
-        var enabled = PluginConfig.FilterConfig.Bind(sectionName, "Enabled", false,
+        var enabled = PluginConfig.FilterConfig.Bind(sectionName, "Enabled", true,
             new ConfigDescription("Allow source to write logs"));
 
         var logLevel = PluginConfig.FilterConfig.Bind(sectionName, "LogLevels", LogLevel.All,
@@ -366,8 +366,8 @@ internal static class PluginConfig
 
         //Initialize Configs
         //LogWrapping
-        LogWrapping.Enabled = _config.Bind("LogWrapping", "Enabled", true, new ConfigDescription("Look into game assemblies and tweak calls to Unity.Debug"));
-        LogWrapping.TargetAssemblies = _config.Bind("LogWrapping", "Target Assemblies", "Assembly-CSharp.dll", new ConfigDescription("Which Assemblies to look into\nListSeparator=,"));
+        LogWrapping.Enabled = _config.Bind("LogWrapping", "Enabled", false, new ConfigDescription("Look into game assemblies and tweak calls to Unity.Debug"));
+        LogWrapping.TargetAssemblies = _config.Bind("LogWrapping", "Target Assemblies", "Assembly-CSharp.dll,Other-assembly.dll", "Which Assemblies to look into");
         //Timestamps
         Timestamps.Enabled = _config.Bind("Timestamps", "Enabled", true
             , "add numeric timestamps to the logs");
@@ -391,7 +391,7 @@ internal static class PluginConfig
         BepInEx.Unity = _config.Bind("BepInEx", "Async Unity", true
             , "convert BepInEx->Unity Log to async");
         //Debug
-        Debug.VerboseCecil = _config.Bind("Debug", "VerboseCecil", false, "Print A LOT more logs about LogLine tracking");
+        Debug.LogWrappingVerbosity = _config.Bind("Debug", "LogWrapping Verbosity Level", LogLevel.None, "Print A LOT more logs about LogWrapping");
 
         CleanOrphanedEntries(_config);
     }
@@ -441,7 +441,7 @@ internal static class PluginConfig
 
     public static class Debug
     {
-        public static ConfigEntry<bool> VerboseCecil;
+        public static ConfigEntry<LogLevel> LogWrappingVerbosity;
     }
 
     public enum ShutdownType

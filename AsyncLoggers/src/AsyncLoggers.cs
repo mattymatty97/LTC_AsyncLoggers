@@ -19,7 +19,7 @@ public static class AsyncLoggers
 {
     public const string GUID = "mattymatty.AsyncLoggers";
     public const string NAME = "AsyncLoggers";
-    public const string VERSION = "2.0.0";
+    public const string VERSION = "2.0.1";
     internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
     internal static ManualLogSource WrappedUnitySource { get; } = Logger.CreateLogSource("Unity Log");
 
@@ -57,13 +57,13 @@ public static class AsyncLoggers
     // Cannot be renamed, method name is important
     public static void Initialize()
     {
-        Log.LogInfo($"{NAME} Prepatcher Started");
+        Log.LogInfo($"{NAME}:{VERSION} Prepatcher Started");
         PluginConfig.Init();
 
         _startTime = Environment.TickCount & Int32.MaxValue;
         if (PluginConfig.Timestamps.Enabled.Value)
             Log.LogWarning(
-                $"{NAME} Timestamps start at {DateTime.UtcNow:dddd, dd MMMM yyyy HH:mm:ss.fffffff} UTC");
+                $"{NAME}:{VERSION} Timestamps start at {DateTime.UtcNow:dddd, dd MMMM yyyy HH:mm:ss.fffffff} UTC");
 
         GetLogTimestamp = PluginConfig.Timestamps.Type.Value switch
         {
@@ -115,7 +115,7 @@ public static class AsyncLoggers
         _harmony.PatchAll(typeof(PreloaderConsoleListenerPatch));
         _harmony.PatchAll(typeof(ChainloaderPatch));
         _harmony.PatchAll(typeof(LoggerPatch));
-        Log.LogInfo($"{NAME} Prepatcher Finished");
+        Log.LogInfo($"{NAME}:{VERSION} Prepatcher Finished");
     }
 
     internal static Func<LogEventArgs, object> GetLogTimestamp;
@@ -133,9 +133,9 @@ public static class AsyncLoggers
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static void VerboseCecilLog(LogLevel level, string logline)
+    internal static void VerboseLogWrappingLog(LogLevel level, string logline)
     {
-        if (PluginConfig.Debug.VerboseCecil.Value)
+        if ((PluginConfig.Debug.LogWrappingVerbosity.Value & level) != 0)
             Log.Log(level, logline);
     }
     
