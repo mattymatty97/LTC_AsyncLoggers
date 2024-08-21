@@ -4,6 +4,7 @@
 - remove patches to unity loggers
 - embed AsyncLoggers.Filter
 - immediately defer logs with a global Dispatcher Thread
+- add LogWrapping system to edit basegame Log calls
 
 ---
 

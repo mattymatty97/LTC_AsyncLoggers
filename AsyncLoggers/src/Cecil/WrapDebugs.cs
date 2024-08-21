@@ -188,14 +188,14 @@ internal static class WrapDebugs
                 var argumentCount = method.Parameters.Count + (method.HasThis ? 1 : 0);
 
                 // Initialize a list to store arguments for this method call
-                LinkedList<string> args = new LinkedList<string>();
+                var args = new LinkedList<string>();
 
                 AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: has {argumentCount} arguments");
 
                 // Recursively find and process arguments for the method call
                 for (int i = 0; i < argumentCount; i++)
                 {
-                    LinkedList<string> argumentDescriptions = new LinkedList<string>();
+                    var argumentDescriptions = new LinkedList<string>();
                     lastIndex = FindFirstInstruction(target, lastIndex - 1, argumentDescriptions);
                     args.AddFirst(string.Join(".", argumentDescriptions));
                 }
@@ -228,12 +228,7 @@ internal static class WrapDebugs
             else if (opCode is { StackBehaviourPop: StackBehaviour.Pop0, StackBehaviourPush: StackBehaviour.Push0 })
             {
                 AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: is Nop");
-
-                var startIndex = FindFirstInstruction(target, index - 1, arguments);
-
-                AsyncLoggers.VerboseCecilLog(LogLevel.Debug, $"{instruction}: startIndex {startIndex}");
-
-                retIndex = startIndex;
+                retIndex = null;
             }
             else
             {
@@ -440,7 +435,7 @@ internal static class WrapDebugs
             case Code.Ldloc_S:
             case Code.Ldloca:
             case Code.Ldloca_S:
-                return $"#{{{((VariableDefinition)instruction.Operand).Index}}}";
+                return $"#{((VariableDefinition)instruction.Operand).Index}";
 
             case Code.Ldloc_0:
                 return "#0";

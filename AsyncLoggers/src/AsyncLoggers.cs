@@ -31,13 +31,21 @@ public static class AsyncLoggers
 
     private static IEnumerable<string> GetDLLs()
     {
-        yield return "Assembly-CSharp.dll";
+        if (!PluginConfig.LogWrapping.Enabled.Value)
+            yield break;
+        
+        var assemblies = PluginConfig.LogWrapping.TargetAssemblies.Value.Split(",");
+        foreach (var assembly in assemblies)
+        {
+            yield return Path.GetFileName(assembly);
+        }
     }
 
     public static void Patch(AssemblyDefinition assembly)
     {
         try
         {
+            AsyncLoggers.Log.LogWarning($"Parsing {assembly.Name.Name} for Unity.Debug calls!");
             WrapDebugs.ProcessAssembly(assembly);
         }
         catch (Exception ex)

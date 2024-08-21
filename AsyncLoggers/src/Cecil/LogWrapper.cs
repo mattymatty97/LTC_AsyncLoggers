@@ -1,7 +1,4 @@
-﻿using System;
-using BepInEx.Logging;
-
-namespace AsyncLoggers.Cecil;
+﻿namespace AsyncLoggers.Cecil;
 
 public static class LogWrapper
 {
