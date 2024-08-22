@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using AsyncLoggers.Config;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.EventArgs;
 using BepInEx.Bootstrap;

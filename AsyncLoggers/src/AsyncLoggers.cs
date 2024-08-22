@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.Cecil;
+using AsyncLoggers.Config;
 using AsyncLoggers.Patches;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.EventArgs;
@@ -19,11 +20,11 @@ public static class AsyncLoggers
 {
     public const string GUID = "mattymatty.AsyncLoggers";
     public const string NAME = "AsyncLoggers";
-    public const string VERSION = "2.0.2";
+    public const string VERSION = "2.0.3";
     internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
     internal static ManualLogSource WrappedUnitySource { get; } = Logger.CreateLogSource("Unity Log");
 
-    private static Harmony _harmony;
+    internal static Harmony _harmony;
         
     private static int _startTime;
 
@@ -34,7 +35,7 @@ public static class AsyncLoggers
         if (!PluginConfig.LogWrapping.Enabled.Value)
             yield break;
         
-        var assemblies = PluginConfig.LogWrapping.TargetAssemblies.Value.Split(",");
+        var assemblies = PluginConfig.LogWrapping.TargetGameAssemblies.Value.Split(",");
         foreach (var assembly in assemblies)
         {
             yield return Path.GetFileName(assembly);
@@ -59,7 +60,7 @@ public static class AsyncLoggers
     {
         Log.LogInfo($"{NAME}:{VERSION} Prepatcher Started");
         PluginConfig.Init();
-
+        
         _startTime = Environment.TickCount & Int32.MaxValue;
         if (PluginConfig.Timestamps.Enabled.Value)
             Log.LogWarning(
@@ -102,7 +103,7 @@ public static class AsyncLoggers
             FilterConfig.LevelMasks[source] = LogLevel.All;
             break;
         }
-            
+        
     }
         
     public static void Finish()
@@ -115,6 +116,7 @@ public static class AsyncLoggers
         _harmony.PatchAll(typeof(PreloaderConsoleListenerPatch));
         _harmony.PatchAll(typeof(ChainloaderPatch));
         _harmony.PatchAll(typeof(LoggerPatch));
+        
         Log.LogInfo($"{NAME}:{VERSION} Prepatcher Finished");
     }
 

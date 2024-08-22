@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using AsyncLoggers.Config;
 using BepInEx.Logging;
 using Logging = BepInEx.Logging;
 

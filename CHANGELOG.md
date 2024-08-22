@@ -1,5 +1,5 @@
 # v2.0.2
-- WIP
+- small optimizations to wrapping system
 
 # v2.0.1
 - fix wrong defaults

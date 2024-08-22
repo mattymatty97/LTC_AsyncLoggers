@@ -4,7 +4,7 @@
         <RootNamespace>AsyncLoggers</RootNamespace>
         <AssemblyName>AsyncLoggers</AssemblyName>
         <Product>Async Loggers</Product>
-        <Version>2.0.2</Version>
+        <Version>2.0.3</Version>
         <PackageLicenseExpression>LGPL-2.1+</PackageLicenseExpression>
         <TargetFramework>netstandard2.1</TargetFramework>
         <LangVersion>Latest</LangVersion>
@@ -12,9 +12,6 @@
     <ItemGroup>
         <Content Include="GameDirectory.targets"/>
         <Content Include="PostBuildEvents.targets"/>
-    </ItemGroup>
-    <ItemGroup>
-        <PackageReference Include="TeamBMX.LobbyCompatibility" Version="1.0.1" />
     </ItemGroup>
     <!-- Defining the reference files that have to be publicized. -->
     <ItemGroup>

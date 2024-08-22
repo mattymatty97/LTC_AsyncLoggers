@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using AsyncLoggers.Buffer;
+using AsyncLoggers.Config;
 
 namespace AsyncLoggers.Wrappers
 {

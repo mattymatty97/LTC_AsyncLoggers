@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text;
+using AsyncLoggers.Config;
 using BepInEx.Logging;
 using HarmonyLib;
 using Mono.Cecil;
