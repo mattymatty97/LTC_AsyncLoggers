@@ -1,3 +1,6 @@
+# v2.0.3
+- ensure assemblies in the LogWrapping pass are loaded in dependency order
+
 # v2.0.2
 - small optimizations to wrapping system
 
