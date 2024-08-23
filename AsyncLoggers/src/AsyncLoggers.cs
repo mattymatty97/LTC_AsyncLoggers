@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.Cecil;
@@ -13,6 +14,7 @@ using BepInEx.Logging;
 using HarmonyLib;
 using Mono.Cecil;
 using Logger = BepInEx.Logging.Logger;
+using Object = UnityEngine.Object;
 
 namespace AsyncLoggers;
 
@@ -34,9 +36,21 @@ public static class AsyncLoggers
     {
         if (!PluginConfig.LogWrapping.Enabled.Value)
             yield break;
+
+        var dlls = Utility.GetUniqueFilesInDirectories(BepInEx.Paths.DllSearchPaths, "*.dll");
         
-        var assemblies = PluginConfig.LogWrapping.TargetGameAssemblies.Value.Split(",");
-        foreach (var assembly in assemblies)
+        var assemblies = PluginConfig.LogWrapping.TargetGameAssemblies.Value.Split(",").Select(p => p.Trim()).ToList();;
+        var sortedList = AssemblyDependencySorter.SortAssembliesByDependency(assemblies.Select(name =>
+        {
+            return dlls.FirstOrDefault(path => path.EndsWith(name));
+        }).Where(s => s != null)).ToList();
+        
+        if (assemblies.Contains("***"))
+            sortedList = AssemblyDependencySorter.SortAssembliesByDependency(dlls.Where(an => !an.Contains("netstandard"))).ToList();
+        
+        VerboseLogWrappingLog(LogLevel.Warning, $"Assembly Load Order: {string.Join(",", sortedList.Select(Path.GetFileName))}");
+        
+        foreach (var assembly in sortedList)
         {
             yield return Path.GetFileName(assembly);
         }
@@ -47,7 +61,8 @@ public static class AsyncLoggers
         try
         {
             AsyncLoggers.Log.LogWarning($"Parsing {assembly.Name.Name} for Unity.Debug calls!");
-            WrapDebugs.ProcessAssembly(assembly);
+            WrapDebugs.ProcessAssembly(assembly, out var count);
+            AsyncLoggers.Log.LogInfo($"Found {count} Unity.Debug calls in {assembly.Name.Name}");
         }
         catch (Exception ex)
         {

@@ -152,33 +152,34 @@ internal static class WrapDebugs
     }
 
 
-    internal static void ProcessAssembly(AssemblyDefinition assembly)
+    internal static void ProcessAssembly(AssemblyDefinition assembly, out long callCount)
     {
+        callCount = 0;
         foreach (var moduleDefinition in assembly.Modules)
         {
-            ProcessModule(assembly, moduleDefinition);
+            ProcessModule(assembly, moduleDefinition, ref callCount);
         }
     }
 
-    private static void ProcessModule(AssemblyDefinition assembly, ModuleDefinition module)
+    private static void ProcessModule(AssemblyDefinition assembly, ModuleDefinition module, ref long callCount)
     {
         var normalRedirects = new LogRedirects(module, typeof(LogWrapper));
         var throttledRedirects = new LogRedirects(module, typeof(ThrothledLogWrapper));
         foreach (var typeDefinition in module.Types)
         {
-            ProcessType(assembly, typeDefinition, normalRedirects, throttledRedirects);
+            ProcessType(assembly, typeDefinition, normalRedirects, throttledRedirects, ref callCount);
         }
     }
 
-    private static void ProcessType(AssemblyDefinition assembly, TypeDefinition type, LogRedirects normalRedirects, LogRedirects throttledRedirects)
+    private static void ProcessType(AssemblyDefinition assembly, TypeDefinition type, LogRedirects normalRedirects, LogRedirects throttledRedirects, ref long callCount)
     {
         foreach (var methodDefinition in type.Methods)
         {
-            ProcessMethod(assembly, type, methodDefinition, normalRedirects, throttledRedirects);
+            ProcessMethod(assembly, type, methodDefinition, normalRedirects, throttledRedirects, ref callCount);
         }
     }
 
-    private static void ProcessMethod(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method, LogRedirects normalRedirects, LogRedirects throttledRedirects)
+    private static void ProcessMethod(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method, LogRedirects normalRedirects, LogRedirects throttledRedirects, ref long callCount)
     {
         if (!method.HasBody)
             return;
@@ -199,6 +200,7 @@ internal static class WrapDebugs
                     // Check if the instruction is inside a catch block
                     if (!IsInsideCatchBlock(instruction, exceptionHandlers))
                     {
+                        callCount++;
                         HandleLogCall(assembly, type, method, normalRedirects, throttledRedirects, ref instructions, ref i);
                     }
                 }
@@ -266,7 +268,7 @@ internal static class WrapDebugs
         else if (config.Status == XmlConfig.CallStatus.BepInEx)
         {
             var callReference = instruction.Operand as MethodReference;
-            if (config.Cooldown.HasValue)
+            if (startIndex != -1 && config.Cooldown.HasValue)
             {
                 AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,
                     $"Throttling \"{logline}\" from {config.ClassName}:{config.MethodName}");
@@ -327,7 +329,7 @@ internal static class WrapDebugs
                     throw new KeyNotFoundException();
 
                 var lastIndex = index;
-                var argumentCount = method.Parameters.Count + (method.HasThis ? 1 : 0);
+                var argumentCount = method.Parameters.Count + (method.HasThis && opCode != OpCodes.Newobj ? 1 : 0);
 
                 // Initialize a list to store arguments for this method call
                 var args = new LinkedList<string>();
@@ -395,12 +397,12 @@ internal static class WrapDebugs
         catch (Exception ex)
         {
             // Log and rethrow any exceptions encountered during processing
-            AsyncLoggers.Log.LogFatal(instruction);
+            AsyncLoggers.Log.LogFatal($"{target.FullName} - {instruction}");
             ExceptionDispatchInfo.Capture(ex).Throw();
         }
 
         // If no valid instruction was found, throw an exception
-        throw new KeyNotFoundException("Could not find first instruction");
+        return -1;
     }
 
     private static void ProcessMethodCallOrProperty(Instruction instruction, MethodReference method,
@@ -630,7 +632,7 @@ internal static class WrapDebugs
                     return operand.ToString();
 
                 if (operand is string s)
-                    return $"\"{s}\"";
+                    return EscapeForCode(s);
 
                 break;
         }
@@ -775,5 +777,42 @@ internal static class WrapDebugs
         if (opCode == OpCodes.Ldelem_U2)
             return true;
         return opCode == OpCodes.Ldelem_U4;
+    }
+    
+    static string EscapeForCode(string str)
+    {
+        var sb = new StringBuilder();
+        foreach (var c in str)
+        {
+            switch (c)
+            {
+                case '\\':
+                    sb.Append(@"\\");
+                    break;
+                case '\"':
+                    sb.Append("\\\"");
+                    break;
+                case '\n':
+                    sb.Append("\\n");
+                    break;
+                case '\r':
+                    sb.Append("\\r");
+                    break;
+                case '\t':
+                    sb.Append("\\t");
+                    break;
+                default:
+                    if (c < 32 || c > 126) // Non-printable or extended ASCII characters
+                    {
+                        sb.AppendFormat("\\u{0:X4}", (int)c);
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+                    break;
+            }
+        }
+        return "\"" + sb.ToString() + "\"";
     }
 }

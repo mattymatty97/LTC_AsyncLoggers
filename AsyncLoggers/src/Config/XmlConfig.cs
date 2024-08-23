@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Security;
 using System.Text;
 using System.Xml;
 using BepInEx;
@@ -60,8 +61,6 @@ internal static class XmlConfig
         Edit 'status' to customize log behavior
         """;
 
-    private static bool _fileChanged = false;
-
     internal struct LogCallInfo
     {
         public string AssemblyName { get; }
@@ -98,7 +97,6 @@ internal static class XmlConfig
                 assemblyAttr.Value = assemblyName;
                 ((XmlElement)assemblyNode).SetAttributeNode(assemblyAttr);
                 root.AppendChild(assemblyNode);
-                _fileChanged = true;
             }
 
             UnMarkAsObsolete(assemblyNode);
@@ -112,7 +110,6 @@ internal static class XmlConfig
                 classAttr.Value = className;
                 ((XmlElement)classNode).SetAttributeNode(classAttr);
                 assemblyNode.AppendChild(classNode);
-                _fileChanged = true;
             }
 
             UnMarkAsObsolete(classNode);
@@ -131,7 +128,6 @@ internal static class XmlConfig
                     doc.CreateComment(EditReminderComment);
 
                 methodNode.AppendChild(reminderComment);
-                _fileChanged = true;
             }
 
             UnMarkAsObsolete(methodNode);
@@ -156,7 +152,6 @@ internal static class XmlConfig
                 ((XmlElement)logCallNode).SetAttributeNode(statusAttr);
                 logCallNode.InnerText = logLine;
                 methodNode.AppendChild(logCallNode);
-                _fileChanged = true;
             }
 
             UnMarkAsObsolete(logCallNode);
@@ -230,7 +225,6 @@ internal static class XmlConfig
 
             var usageCommentNode = configFile.CreateComment(UsageComment);
             root.AppendChild(usageCommentNode);
-            _fileChanged = true;
         }
 
         if (Enum.TryParse(configFile.DocumentElement!.GetAttribute("default_status"), out CallStatus defaultStatus) &&
@@ -249,9 +243,6 @@ internal static class XmlConfig
     internal static void WriteLogConfig()
     {
         if (!PluginConfig.LogWrapping.Enabled.Value)
-            return;
-
-        if (!_fileChanged)
             return;
 
         // Write to the file
