@@ -271,7 +271,7 @@ internal static class AssemblyAnalyzer
 
         var startIndex = FindStartInstruction(method, exceptionBlock, index, logDescription, true).Index;
 
-        var logline = string.Join(", ", logDescription);
+        var logline = logDescription.AsParameters();
 
         AsyncLoggers.VerboseLogWrappingLog(LogLevel.Info,
             () => $"Method {typeName}:{methodName} has Log named \"{logline}\"");
@@ -394,7 +394,7 @@ internal static class AssemblyAnalyzer
                 {
                     var argumentDescriptions = new LinkedList<string>();
                     lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, argumentDescriptions);
-                    args.AddFirst(string.Join(".", argumentDescriptions));
+                    args.AddFirst(argumentDescriptions.AsChain());
                 }
 
                 var index1 = lastIndex;
@@ -437,7 +437,7 @@ internal static class AssemblyAnalyzer
                             instruction, out var retIndex
                         ))
                     {
-                        var text = $"[{string.Join(",", arrayElements.OrderBy(p => p.Key).Select(p => p.Value))}]";
+                        var text = arrayElements.OrderBy(p => p.Key).Select(p => p.Value).FormatArray();
                         arguments.AddLast(text);
                         return retIndex;
                     }
@@ -493,19 +493,19 @@ internal static class AssemblyAnalyzer
             // If the instruction is a constructor call (Newobj), format it as an object creation
             if (instruction.OpCode == OpCodes.Newobj)
             {
-                arguments.AddLast($"new {method.Name}({string.Join(",", args)})");
+                arguments.AddLast($"new {method.Name}{args.FormatArguments()}");
             }
             // If the method has a 'this' reference, format it as a method call on an instance
             else if (method.HasThis)
             {
                 var @this = args.First.Value; // The first argument represents 'this'
                 arguments.AddLast(
-                    $"{@this}.{method.Name}({string.Join(",", args.Skip(1))})"); // Skip the first argument (this) in the method call
+                    $"{@this}.{method.Name}{args.Skip(1).FormatArguments()}"); // Skip the first argument (this) in the method call
             }
             else
             {
                 // Otherwise, format it as a static method call
-                arguments.AddLast(method.Name + "(" + string.Join(",", args) + ")");
+                arguments.AddLast(method.Name + args.FormatArguments());
             }
         }
     }
@@ -559,7 +559,7 @@ internal static class AssemblyAnalyzer
 
                 // Process the first parameter by recursively finding and processing the previous instruction
                 lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
-                string indexArg = string.Join(".", subArguments);
+                string indexArg = subArguments.AsChain();
                 subArguments.Clear();
 
                 // Process the second parameter
@@ -584,12 +584,12 @@ internal static class AssemblyAnalyzer
                             arguments.AddLast(subArgument);
                         }
 
-                        arguments.AddLast($"{subArguments.Last.Value}[{indexArg}]");
+                        arguments.AddLast($"{subArguments.Last.Value}{ new[]{indexArg}.FormatArray() }");
                     }
                     else
                     {
                         // Otherwise, add the instruction with its parameters as arguments
-                        arguments.AddLast($"{opCode}({string.Join(".", subArguments)}, {indexArg})");
+                        arguments.AddLast($"{opCode}( {subArguments.AsChain()}, {indexArg} )");
                     }
 
                     retIndex = new StartIndex(lastIndex.Index);
@@ -606,15 +606,15 @@ internal static class AssemblyAnalyzer
 
                 // Process the three parameters by recursively finding and processing the previous instructions
                 lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
-                indexArgs.AddFirst(string.Join(".", subArguments));
+                indexArgs.AddFirst(subArguments.AsChain());
                 subArguments.Clear();
 
                 lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
-                indexArgs.AddFirst(string.Join(".", subArguments));
+                indexArgs.AddFirst(subArguments.AsChain());
                 subArguments.Clear();
 
                 lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
-                indexArgs.AddFirst(string.Join(".", subArguments));
+                indexArgs.AddFirst(subArguments.AsChain());
 
                 AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {lastIndex}");
 
@@ -628,7 +628,7 @@ internal static class AssemblyAnalyzer
                 else
                 {
                     // Add the processed parameters as arguments
-                    arguments.AddLast($"{opCode}({string.Join(",", indexArgs)})");
+                    arguments.AddLast($"{opCode}{indexArgs.FormatArguments()}");
                     retIndex = new StartIndex(lastIndex.Index);
                 }
 
@@ -662,12 +662,12 @@ internal static class AssemblyAnalyzer
         if (arrayIndex.Count != 1 || !int.TryParse(arrayIndex.First.Value, out var arrayIndexValue))
         {
             AsyncLoggers.VerboseLogWrappingLog(LogLevel.Error,
-                () => $"{instruction}: index not found! [{string.Join(",", arrayIndex)}]");
+                () => $"{instruction}: index not found! {arrayIndex.FormatArray()}");
             retIndex = default;
             return false;
         }
 
-        arrayArguments[arrayIndexValue] = string.Join(".", subArguments);
+        arrayArguments[arrayIndexValue] = subArguments.AsChain();
 
         lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
 
@@ -740,16 +740,16 @@ internal static class AssemblyAnalyzer
             case Code.Ldloc_S:
             case Code.Ldloca:
             case Code.Ldloca_S:
-                return $"#{((VariableDefinition)instruction.Operand).Index}";
+                return $"var_{((VariableDefinition)instruction.Operand).Index}";
 
             case Code.Ldloc_0:
-                return "#0";
+                return "var_0";
             case Code.Ldloc_1:
-                return "#1";
+                return "var_1";
             case Code.Ldloc_2:
-                return "#2";
+                return "var_2";
             case Code.Ldloc_3:
-                return "#3";
+                return "var_3";
 
             // Method arguments loading
             case Code.Ldarg:
@@ -1042,5 +1042,25 @@ internal static class AssemblyAnalyzer
         internal readonly int Index = index;
         internal readonly bool IsStub = isStub;
         internal readonly bool IsDup = isDup;
+    }
+
+    private static string FormatArguments(this IEnumerable<string> list)
+    {
+        return $"({list.AsParameters()})";
+    }
+    
+    private static string FormatArray(this IEnumerable<string> list)
+    {
+        return $"[{list.AsParameters()}]";
+    }
+    
+    private static string AsParameters(this IEnumerable<string> list)
+    {
+        return string.Join(", ", list);
+    }
+    
+    private static string AsChain(this IEnumerable<string> list)
+    {
+        return string.Join(".", list);
     }
 }
