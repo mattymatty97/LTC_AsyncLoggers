@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using AsyncLoggers.API;
 using AsyncLoggers.Config;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.EventArgs;
@@ -36,7 +37,7 @@ internal class LoggerPatch
             return true;
         
         string stacktrace = null;
-        if ((eventArgs.Level & AsyncLoggers.TraceableLevelsMaks) != 0 && sender is not ManualLogSource { SourceName: "Preloader" })
+        if ((eventArgs.Level & AsyncLoggersAPI.TraceableLevelsMaks) != 0 && sender is not ManualLogSource { SourceName: "Preloader" })
         {
             stacktrace = Environment.StackTrace;
         }

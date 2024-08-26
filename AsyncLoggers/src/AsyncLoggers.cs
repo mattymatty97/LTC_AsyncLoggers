@@ -12,9 +12,9 @@ using AsyncLoggers.Wrappers.EventArgs;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using JetBrains.Annotations;
 using Mono.Cecil;
 using Logger = BepInEx.Logging.Logger;
-using Object = UnityEngine.Object;
 
 namespace AsyncLoggers;
 
@@ -22,7 +22,9 @@ public static class AsyncLoggers
 {
     public const string GUID = "mattymatty.AsyncLoggers";
     public const string NAME = "AsyncLoggers";
-    public const string VERSION = "2.0.3";
+    public const string VERSION = "2.1.0";
+
+    internal static readonly BepInPlugin Plugin = new BepInPlugin(GUID, NAME, VERSION);
     internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
     internal static ManualLogSource WrappedUnitySource { get; } = Logger.CreateLogSource("Unity Log");
 
@@ -48,7 +50,7 @@ public static class AsyncLoggers
         if (assemblies.Contains("***"))
             sortedList = AssemblyDependencySorter.SortAssembliesByDependency(dlls.Where(an => !an.Contains("netstandard"))).ToList();
         
-        VerboseLogWrappingLog(LogLevel.Warning, $"Assembly Load Order: {string.Join(",", sortedList.Select(Path.GetFileName))}");
+        VerboseLogWrappingLog(LogLevel.Warning, () => $"Assembly Load Order: {string.Join(",", sortedList.Select(Path.GetFileName))}");
         
         foreach (var assembly in sortedList)
         {
@@ -61,7 +63,7 @@ public static class AsyncLoggers
         try
         {
             AsyncLoggers.Log.LogWarning($"Parsing {assembly.Name.Name} for Unity.Debug calls!");
-            WrapDebugs.ProcessAssembly(assembly, out var count);
+            AssemblyAnalyzer.ProcessAssembly(assembly, out var count);
             AsyncLoggers.Log.LogInfo($"Found {count} Unity.Debug calls in {assembly.Name.Name}");
         }
         catch (Exception ex)
@@ -150,76 +152,23 @@ public static class AsyncLoggers
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static void VerboseLogWrappingLog(LogLevel level, string logline)
+    internal static void VerboseLogWrappingLog(LogLevel level, [NotNull] Func<string> logline)
     {
         if ((level & PluginConfig.Debug.LogWrappingVerbosity.Value) != 0)
-            Log.Log(level, logline);
+            Log.Log(level, logline());
     }
     
     [MethodImpl(MethodImplOptions.NoInlining)]
-    internal static void VerboseLog(LogLevel level, string logline)
+    internal static void VerboseLog(LogLevel level, [NotNull] Func<string> logline)
     {
         //TODO: Add config for this logtype
         //if (PluginConfig.Debug.VerboseCecil.Value)
-            Log.Log(level, logline);
+            Log.Log(level, logline());
     }
 
     [Obsolete("RegisterIgnoredILogListener is deprecated please use RegisterSyncListener instead")]
     public static void RegisterIgnoredILogListener(ILogListener toIgnore)
     {
-        RegisterSyncListener(toIgnore);
+        API.AsyncLoggersAPI.UpdateListenerFlags(toIgnore, API.AsyncLoggersAPI.LogListenerFlags.SyncHandling);
     }
-        
-    /**
-     * Mark this listener as forcefully sync ( will not be deferred )
-     */
-    public static bool RegisterSyncListener(ILogListener listener)
-    {
-        return LoggerPatch.SyncListeners.Add(listener);
-    }
-        
-    /**
-     * Remove this listener from the list ( mainly for GC purposes )
-     */
-    public static bool UnRegisterSyncListener(ILogListener listener)
-    {
-        return LoggerPatch.SyncListeners.Remove(listener);
-    }
-        
-    /**
-     * Mark this listener as not affected by the source filters ( will ignore AsyncLoggers.Filter.cfg )
-     */
-    public static bool RegisterUnfilteredListener(ILogListener listener)
-    {
-        return LoggerPatch.UnfilteredListeners.Add(listener);
-    }
-        
-    /**
-     * Remove this listener from the list ( mainly for GC purposes )
-     */
-    public static bool UnRegisterUnfilteredListener(ILogListener listener)
-    {
-        return LoggerPatch.UnfilteredListeners.Remove(listener);
-    }
-        
-    /**
-     * Mark this listener as Timestamped ( will prepend the text with [{Timestamp}] )
-     */
-    public static bool RegisterTimestampedListener(ILogListener listener)
-    {
-        return LoggerPatch.TimestampedListeners.Add(listener);
-    }
-        
-    /**
-     * Remove this listener from the list ( mainly for GC purposes )
-     */
-    public static bool UnRegisterTimestampedListener(ILogListener listener)
-    {
-        return LoggerPatch.TimestampedListeners.Remove(listener);
-    }
-
-    /**
-     * Which levels will collect and store a stacktrace
-     */
-    public static LogLevel TraceableLevelsMaks = LogLevel.Error | LogLevel.Fatal;
 }

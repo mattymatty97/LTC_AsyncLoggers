@@ -53,7 +53,7 @@ public static class AssemblyDependencySorter
         // Remove the minimal number of nodes to break cycles
         foreach (var node in cyclicNodes)
         {
-            Console.WriteLine($"Removing circular dependency: {node}");
+            AsyncLoggers.Log.LogWarning($"Removing circular dependency: {node}");
             graph.Remove(node);
         }
 

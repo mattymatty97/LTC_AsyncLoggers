@@ -12,7 +12,7 @@ internal static class XmlConfig
     private static readonly string XMLFilename =
         Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME, "LogLines.xml");
 
-    private const string ConfigVersion = "v1";
+    private const string ConfigVersion = "v1.1";
 
     private const string RootComment =
         """
@@ -193,13 +193,21 @@ internal static class XmlConfig
 
         if (configFile.DocumentElement != null)
         {
-            var version = configFile.DocumentElement.GetAttribute("version");
-            if (version != versionString)
+            var version = configFile.DocumentElement.GetAttributeNode("version");
+            if (version?.Value != versionString)
             {
                 AsyncLoggers.Log.LogError(
                     $"Old Config version detected: found '{version}' but we're using '{versionString}'");
                 //TODO handle old config version!
             }
+
+            if (version == null)
+            {
+                version = configFile.CreateAttribute("version");
+                configFile.DocumentElement.SetAttributeNode(version);
+            }
+
+            version.Value = versionString;
         }
 
         if (configFile.DocumentElement == null)

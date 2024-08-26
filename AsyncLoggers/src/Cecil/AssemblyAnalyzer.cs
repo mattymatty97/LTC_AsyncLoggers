@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Runtime.ExceptionServices;
 using System.Text;
 using AsyncLoggers.Config;
@@ -13,7 +12,7 @@ using Mono.Collections.Generic;
 
 namespace AsyncLoggers.Cecil;
 
-internal static class WrapDebugs
+internal static class AssemblyAnalyzer
 {
     private class LogRedirects
     {
@@ -82,66 +81,90 @@ internal static class WrapDebugs
 
         public MethodReference LOGErrorWithContextMethod
         {
-            get { _logErrorWithContextMethod ??=
+            get
+            {
+                _logErrorWithContextMethod ??=
                     _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
                         "LogErrorWithContext"));
-                return _logErrorWithContextMethod; }
+                return _logErrorWithContextMethod;
+            }
         }
 
         public MethodReference LOGWarningWithContextMethod
         {
-            get { _logWarningWithContextMethod ??=
+            get
+            {
+                _logWarningWithContextMethod ??=
                     _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
                         "LogWarningWithContext"));
-                return _logWarningWithContextMethod; }
+                return _logWarningWithContextMethod;
+            }
         }
 
         public MethodReference LOGInfoFormatMethod
         {
-            get { _logInfoFormatMethod ??=
+            get
+            {
+                _logInfoFormatMethod ??=
                     _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
                         "LogInfoFormat"));
-                return _logInfoFormatMethod; }
+                return _logInfoFormatMethod;
+            }
         }
 
         public MethodReference LOGErrorFormatMethod
         {
-            get { _logErrorFormatMethod ??=
+            get
+            {
+                _logErrorFormatMethod ??=
                     _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
                         "LogErrorFormat"));
-                return _logErrorFormatMethod; }
+                return _logErrorFormatMethod;
+            }
         }
 
         public MethodReference LOGWarningFormatMethod
         {
-            get { _logWarningFormatMethod ??=
+            get
+            {
+                _logWarningFormatMethod ??=
                     _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
                         "LogWarningFormat"));
-                return _logWarningFormatMethod; }
+                return _logWarningFormatMethod;
+            }
         }
 
         public MethodReference LOGInfoFormatWithContextMethod
         {
-            get { _logInfoFormatWithContextMethod ??=
+            get
+            {
+                _logInfoFormatWithContextMethod ??=
                     _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
                         "LogInfoFormatWithContext"));
-                return _logInfoFormatWithContextMethod; }
+                return _logInfoFormatWithContextMethod;
+            }
         }
 
         public MethodReference LOGErrorFormatWithContextMethod
         {
-            get { _logErrorFormatWithContextMethod ??=
+            get
+            {
+                _logErrorFormatWithContextMethod ??=
                     _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
                         "LogErrorFormatWithContext"));
-                return _logErrorFormatWithContextMethod; }
+                return _logErrorFormatWithContextMethod;
+            }
         }
 
         public MethodReference LOGWarningFormatWithContextMethod
         {
-            get { _logWarningFormatWithContextMethod ??=
+            get
+            {
+                _logWarningFormatWithContextMethod ??=
                     _moduleDefinition.ImportReference(AccessTools.Method(_redirectType,
                         "LogWarningFormatWithContext"));
-                return _logWarningFormatWithContextMethod; }
+                return _logWarningFormatWithContextMethod;
+            }
         }
 
         internal LogRedirects(ModuleDefinition moduleDefinition, Type redirectType)
@@ -171,7 +194,8 @@ internal static class WrapDebugs
         }
     }
 
-    private static void ProcessType(AssemblyDefinition assembly, TypeDefinition type, LogRedirects normalRedirects, LogRedirects throttledRedirects, ref long callCount)
+    private static void ProcessType(AssemblyDefinition assembly, TypeDefinition type, LogRedirects normalRedirects,
+        LogRedirects throttledRedirects, ref long callCount)
     {
         foreach (var methodDefinition in type.Methods)
         {
@@ -179,7 +203,8 @@ internal static class WrapDebugs
         }
     }
 
-    private static void ProcessMethod(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method, LogRedirects normalRedirects, LogRedirects throttledRedirects, ref long callCount)
+    private static void ProcessMethod(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method,
+        LogRedirects normalRedirects, LogRedirects throttledRedirects, ref long callCount)
     {
         if (!method.HasBody)
             return;
@@ -198,17 +223,18 @@ internal static class WrapDebugs
                     methodReference.Name.StartsWith("Log"))
                 {
                     // Check if the instruction is inside a catch block
-                    if (!IsInsideCatchBlock(instruction, exceptionHandlers))
-                    {
-                        callCount++;
-                        HandleLogCall(assembly, type, method, normalRedirects, throttledRedirects, ref instructions, ref i);
-                    }
+                    var exceptionBlock = GetCatchBlock(instruction, exceptionHandlers);
+
+                    callCount++;
+                    HandleLogCall(assembly, type, method, exceptionBlock, normalRedirects, throttledRedirects,
+                        ref instructions, ref i);
                 }
             }
         }
     }
 
-    private static bool IsInsideCatchBlock(Instruction instruction, Collection<ExceptionHandler> exceptionHandlers)
+    private static ExceptionHandler GetCatchBlock(Instruction instruction,
+        Collection<ExceptionHandler> exceptionHandlers)
     {
         foreach (var handler in exceptionHandlers)
         {
@@ -218,16 +244,17 @@ internal static class WrapDebugs
                 if (instruction.Offset >= handler.HandlerStart.Offset &&
                     instruction.Offset <= handler.HandlerEnd.Offset)
                 {
-                    return true;
+                    return handler;
                 }
             }
         }
 
-        return false;
+        return null;
     }
 
 
-    private static void HandleLogCall(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method, LogRedirects normalRedirects, LogRedirects throttledRedirects,
+    private static void HandleLogCall(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method,
+        ExceptionHandler exceptionBlock, LogRedirects normalRedirects, LogRedirects throttledRedirects,
         ref Collection<Instruction> instructions, ref int index)
     {
         var endIndex = index;
@@ -237,26 +264,30 @@ internal static class WrapDebugs
 
         var methodName = method.Name;
 
-        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Info,
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Info, () =>
             $"Method {typeName}:{methodName} has Log call at IL_{instruction.Offset:x4}.");
 
         var logDescription = new LinkedList<string>();
 
-        var startIndex = FindFirstInstruction(method, index, logDescription, true);
+        var startIndex = FindStartInstruction(method, exceptionBlock, index, logDescription, true).Index;
 
         var logline = string.Join(", ", logDescription);
 
         AsyncLoggers.VerboseLogWrappingLog(LogLevel.Info,
-            $"Method {typeName}:{methodName} has Log named \"{logline}\"");
+            () => $"Method {typeName}:{methodName} has Log named \"{logline}\"");
 
-        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
-            $"Found span:\n{string.Join("\n", instructions.Skip(startIndex).Take(endIndex - startIndex + 1))}");
+        var collection = instructions;
+        var index1 = startIndex;
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () =>
+            index1 > 0
+                ? $"Found span:\n{string.Join("\n", collection.Skip(index1).Take(endIndex - index1 + 1))}"
+                : $"No span found: index is now {index1}");
 
         var config = XmlConfig.LogCallInfo.GetOrAdd(assembly.Name.Name, type.FullName, method.Name, logline);
 
         if (config.Status == XmlConfig.CallStatus.Suppressed)
         {
-            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning, () =>
                 $"Suppressing \"{logline}\" from {config.ClassName}:{config.MethodName}");
             var args = ((MethodReference)instruction.Operand).Parameters.Count;
             instructions[index] = Instruction.Create(OpCodes.Pop);
@@ -270,25 +301,31 @@ internal static class WrapDebugs
             var callReference = instruction.Operand as MethodReference;
             if (startIndex != -1 && config.Cooldown.HasValue)
             {
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning, () =>
                     $"Throttling \"{logline}\" from {config.ClassName}:{config.MethodName}");
                 var logKey = ThrothledLogWrapper.NextID;
                 ThrothledLogWrapper.CooldownMemory[logKey] = TimeSpan.FromMilliseconds(config.Cooldown.Value);
-                ReplaceCallWithThrothledBepIn(method, throttledRedirects, instructions, ref index, ref startIndex, callReference, logKey);
+                ReplaceCallWithThrothledBepIn(method, throttledRedirects, instructions, ref index, ref startIndex,
+                    callReference, logKey);
             }
             else
             {
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning,
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning, () =>
                     $"Wrapping \"{logline}\" from {config.ClassName}:{config.MethodName}");
                 ReplaceCallWithBepIn(method, normalRedirects, instructions, ref index, callReference);
             }
 
-            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
-                $"Modified span:\n{string.Join("\n", instructions.Skip(startIndex).Take(index - startIndex + 1))}");
+            var collection1 = instructions;
+            var i = index;
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () =>
+                startIndex > 0
+                    ? $"Modified span:\n{string.Join("\n", collection1.Skip(startIndex).Take(i - startIndex + 1))}"
+                    : $"No span found: index is now {startIndex}");
         }
     }
 
-    private static int FindFirstInstruction(MethodDefinition target, int index, LinkedList<string> arguments,
+    private static StartIndex FindStartInstruction(MethodDefinition target, ExceptionHandler exceptionBlock, int index,
+        LinkedList<string> arguments,
         bool isRoot = false)
     {
         // Retrieve the list of IL instructions from the method body
@@ -296,103 +333,134 @@ internal static class WrapDebugs
 
         // Check if the provided index is within the bounds of the instruction list
         if (index < 0 || index >= instructions.Count)
-            throw new IndexOutOfRangeException();
+            return new(Math.Min(-2, index));
 
         // Get the current instruction, its OpCode, and operand
         var instruction = instructions[index];
         var opCode = instruction.OpCode;
         var operand = instruction.Operand;
 
+        if (exceptionBlock != null && exceptionBlock.HandlerStart.Offset > instruction.Offset)
+        {
+            var delta = instruction.Offset - exceptionBlock.HandlerStart.Offset;
+            if (delta < 1)
+            {
+                if (delta != -1)
+                    return new StartIndex(-1);
+
+                arguments.AddLast("ex");
+                return new StartIndex(index + 1);
+            }
+        }
+
         // Log the start of processing for the current instruction
-        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: Starting");
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: Starting");
 
         try
         {
             // If the instruction is a prefix, ignore it and recurse on the previous instruction
             if (opCode.OpCodeType == OpCodeType.Prefix)
             {
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction} is a Prefix ignoring!");
-                return FindFirstInstruction(target, index - 1, arguments);
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction} is a Prefix ignoring!");
+                return FindStartInstruction(target, exceptionBlock, index - 1, arguments);
             }
 
             // Handle duplication (Dup) instructions
             if (opCode == OpCodes.Dup)
             {
                 arguments.AddLast("|dup|");
-                return index;
+                return new StartIndex(index, false, true);
             }
 
+
+            StartIndex lastIndex;
             // Handle method calls (Call, Callvirt, Newobj)
             if (opCode == OpCodes.Call || opCode == OpCodes.Callvirt || opCode == OpCodes.Newobj)
             {
                 if (operand is not MethodReference method)
                     throw new KeyNotFoundException();
 
-                var lastIndex = index;
+                lastIndex = new StartIndex(index);
                 var argumentCount = method.Parameters.Count + (method.HasThis && opCode != OpCodes.Newobj ? 1 : 0);
 
                 // Initialize a list to store arguments for this method call
                 var args = new LinkedList<string>();
 
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: has {argumentCount} arguments");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                    () => $"{instruction}: has {argumentCount} arguments");
 
                 // Recursively find and process arguments for the method call
-                for (int i = 0; i < argumentCount; i++)
+                for (var i = 0; i < argumentCount; i++)
                 {
                     var argumentDescriptions = new LinkedList<string>();
-                    lastIndex = FindFirstInstruction(target, lastIndex - 1, argumentDescriptions);
+                    lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, argumentDescriptions);
                     args.AddFirst(string.Join(".", argumentDescriptions));
                 }
 
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: startIndex {lastIndex}");
+                var index1 = lastIndex;
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {index1}");
 
                 // If this is not the root call and the method returns void, continue searching
-                if (!isRoot && method.ReturnType.MetadataType == MetadataType.Void)
+                if (isRoot || method.ReturnType.MetadataType != MetadataType.Void)
                 {
-                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
-                    lastIndex = FindFirstInstruction(target, lastIndex - 1, arguments);
+                    ProcessMethodCallOrProperty(instruction, method, args, arguments);
+
                     return lastIndex;
                 }
 
                 // Handle property or method calls based on the IL instruction
-                ProcessMethodCallOrProperty(instruction, method, args, arguments);
-
-                return lastIndex;
-            }
-
-            int? retIndex;
-
-            // Handle stack behavior - instructions that don't pop but push to the stack
-            if (opCode.StackBehaviourPop == StackBehaviour.Pop0 && opCode.StackBehaviourPush != StackBehaviour.Push0)
-            {
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: startIndex {index} is Ld*");
-                retIndex = index;
-            }
-            // Handle NOP instructions
-            else if (opCode is { StackBehaviourPop: StackBehaviour.Pop0, StackBehaviourPush: StackBehaviour.Push0 })
-            {
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: is Nop");
-                retIndex = null;
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                    () => $"{instruction}: was a stub - continue search");
+                lastIndex = new StartIndex(lastIndex.Index, true);
             }
             else
             {
-                // Handle instructions that pop 1, 2, or 3 parameters
-                retIndex = HandlePopInstructions(opCode, target, index, arguments, isRoot, instruction);
-            }
-
-            // If we found an index to return, process any variable name and return it
-            if (retIndex.HasValue)
-            {
-                var varName = FindParameterName(target, instruction);
-                if (varName != null)
+                // Handle stack behavior - instructions that don't pop but push to the stack
+                if (opCode.StackBehaviourPop == StackBehaviour.Pop0 &&
+                    opCode.StackBehaviourPush != StackBehaviour.Push0)
                 {
-                    arguments.AddLast(varName);
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                        () => $"{instruction}: startIndex {index} is Ld*");
+                    lastIndex = new StartIndex(index);
+                }
+                // Handle NOP instructions
+                else if (opCode is { StackBehaviourPop: StackBehaviour.Pop0, StackBehaviourPush: StackBehaviour.Push0 })
+                {
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: is Nop");
+                    lastIndex = new StartIndex(index, true);
+                }
+                else
+                {
+                    Dictionary<int, string> arrayElements = new Dictionary<int, string>();
+                    if (opCode == OpCodes.Stelem_Ref && HandleStlelemRef(
+                            target, exceptionBlock, index, arrayElements,
+                            instruction, out var retIndex
+                        ))
+                    {
+                        var text = $"[{string.Join(",", arrayElements.OrderBy(p => p.Key).Select(p => p.Value))}]";
+                        arguments.AddLast(text);
+                        return retIndex;
+                    }
+
+                    // Handle instructions that pop 1, 2, or 3 parameters
+                    lastIndex = HandlePopInstructions(opCode, target, exceptionBlock, index, arguments, isRoot,
+                        instruction);
                 }
 
-                return retIndex.Value;
+                // If we found an index to return, process any variable name and return it
+                if (!lastIndex.IsStub)
+                {
+                    var varName = FindParameterName(target, instruction);
+                    if (varName != null)
+                    {
+                        arguments.AddLast(varName);
+                    }
+
+                    return lastIndex;
+                }
             }
 
-            return FindFirstInstruction(target, index - 1, arguments);
+            return FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, arguments);
         }
         catch (Exception ex)
         {
@@ -402,7 +470,7 @@ internal static class WrapDebugs
         }
 
         // If no valid instruction was found, throw an exception
-        return -1;
+        return new StartIndex(-3);
     }
 
     private static void ProcessMethodCallOrProperty(Instruction instruction, MethodReference method,
@@ -442,30 +510,32 @@ internal static class WrapDebugs
         }
     }
 
-    private static int? HandlePopInstructions(OpCode opCode, MethodDefinition target, int index,
+    private static StartIndex HandlePopInstructions(OpCode opCode, MethodDefinition target,
+        ExceptionHandler exceptionBlock, int index,
         LinkedList<string> arguments, bool isRoot, Instruction instruction)
     {
-        int? retIndex;
+        StartIndex retIndex;
 
         switch (opCode.StackBehaviourPop)
         {
             case StackBehaviour.Pop1 or StackBehaviour.Popi or StackBehaviour.Popref:
             {
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: has 1 param");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: has 1 param");
 
                 // Create a list to hold sub-arguments processed from previous instructions
                 LinkedList<string> subArguments = new LinkedList<string>();
 
                 // Recursively find and process the previous instruction
-                var startIndex = FindFirstInstruction(target, index - 1, subArguments);
+                var startIndex = FindStartInstruction(target, exceptionBlock, index - 1, subArguments).Index;
 
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: startIndex {startIndex}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {startIndex}");
 
                 // If not root and no value is pushed, continue searching backwards
                 if (!isRoot && opCode.StackBehaviourPush == StackBehaviour.Push0)
                 {
-                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
-                    retIndex = null;
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                        () => $"{instruction}: was a stub - continue search");
+                    retIndex = new StartIndex(startIndex, true);
                 }
                 else
                 {
@@ -475,7 +545,7 @@ internal static class WrapDebugs
                         arguments.AddLast(subArgument);
                     }
 
-                    retIndex = startIndex;
+                    retIndex = new StartIndex(startIndex);
                 }
 
                 break;
@@ -483,25 +553,26 @@ internal static class WrapDebugs
             case StackBehaviour.Pop1_pop1 or StackBehaviour.Popi_pop1 or StackBehaviour.Popi_popi
                 or StackBehaviour.Popref_pop1 or StackBehaviour.Popref_popi:
             {
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: has 2 param");
-                var lastIndex = index;
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: has 2 param");
+                var lastIndex = new StartIndex(index);
                 LinkedList<string> subArguments = new LinkedList<string>();
 
                 // Process the first parameter by recursively finding and processing the previous instruction
-                lastIndex = FindFirstInstruction(target, lastIndex - 1, subArguments);
+                lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
                 string indexArg = string.Join(".", subArguments);
                 subArguments.Clear();
 
                 // Process the second parameter
-                lastIndex = FindFirstInstruction(target, lastIndex - 1, subArguments);
+                lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
 
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: startIndex {lastIndex}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {lastIndex}");
 
                 // If not root and no value is pushed, continue searching backwards
                 if (!isRoot && opCode.StackBehaviourPush == StackBehaviour.Push0)
                 {
-                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
-                    retIndex = null;
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                        () => $"{instruction}: was a stub - continue search");
+                    retIndex = new StartIndex(lastIndex.Index, true);
                 }
                 else
                 {
@@ -521,57 +592,147 @@ internal static class WrapDebugs
                         arguments.AddLast($"{opCode}({string.Join(".", subArguments)}, {indexArg})");
                     }
 
-                    retIndex = lastIndex;
+                    retIndex = new StartIndex(lastIndex.Index);
                 }
 
                 break;
             }
             case StackBehaviour.Popi_popi_popi or StackBehaviour.Popref_popi_popi or StackBehaviour.Popref_popi_popref:
             {
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: has 3 param");
-                var lastIndex = index;
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: has 3 param");
+                var lastIndex = new StartIndex(index);
                 LinkedList<string> subArguments = new LinkedList<string>();
                 LinkedList<string> indexArgs = new LinkedList<string>();
 
                 // Process the three parameters by recursively finding and processing the previous instructions
-                lastIndex = FindFirstInstruction(target, lastIndex - 1, subArguments);
+                lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
                 indexArgs.AddFirst(string.Join(".", subArguments));
                 subArguments.Clear();
 
-                lastIndex = FindFirstInstruction(target, lastIndex - 1, subArguments);
+                lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
                 indexArgs.AddFirst(string.Join(".", subArguments));
                 subArguments.Clear();
 
-                lastIndex = FindFirstInstruction(target, lastIndex - 1, subArguments);
+                lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
                 indexArgs.AddFirst(string.Join(".", subArguments));
 
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: startIndex {lastIndex}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {lastIndex}");
 
                 // If not root and no value is pushed, continue searching backwards
                 if (!isRoot && opCode.StackBehaviourPush == StackBehaviour.Push0)
                 {
-                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, $"{instruction}: was a stub - continue search");
-                    retIndex = null;
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                        () => $"{instruction}: was a stub - continue search");
+                    retIndex = new StartIndex(lastIndex.Index, true);
                 }
                 else
                 {
                     // Add the processed parameters as arguments
                     arguments.AddLast($"{opCode}({string.Join(",", indexArgs)})");
-                    retIndex = lastIndex;
+                    retIndex = new StartIndex(lastIndex.Index);
                 }
 
                 break;
             }
             default:
-                // Default behavior if no specific case is matched
-                throw new KeyNotFoundException(instruction.ToString());
+                retIndex = new StartIndex(-3);
+                break;
         }
 
         return retIndex;
     }
 
+
+    private static bool HandleStlelemRef(MethodDefinition target, ExceptionHandler exceptionBlock,
+        int index, Dictionary<int, string> arrayArguments, Instruction instruction, out StartIndex retIndex)
+    {
+        var instructions = target.Body.Instructions;
+
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: has 3 param (array initialization)");
+        var lastIndex = new StartIndex(index);
+        LinkedList<string> subArguments = new LinkedList<string>();
+
+        // Process the inserted parameter!
+        lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+
+        // Process index!
+        LinkedList<string> arrayIndex = new LinkedList<string>();
+        lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, arrayIndex);
+
+        if (arrayIndex.Count != 1 || !int.TryParse(arrayIndex.First.Value, out var arrayIndexValue))
+        {
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Error,
+                () => $"{instruction}: index not found! [{string.Join(",", arrayIndex)}]");
+            retIndex = default;
+            return false;
+        }
+
+        arrayArguments[arrayIndexValue] = string.Join(".", subArguments);
+
+        lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+
+        if (lastIndex.IsDup)
+        {
+            var nestedInstruction = instructions[lastIndex.Index - 1];
+            if (nestedInstruction.OpCode == OpCodes.Newarr)
+            {
+                retIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+                return true;
+            }
+
+            if (nestedInstruction.OpCode != OpCodes.Stelem_Ref)
+            {
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Error,
+                    () => $"{instruction}: expected Stelem_Ref or NewArr but found {nestedInstruction}");
+                retIndex = default;
+                return false;
+            }
+
+            return HandleStlelemRef(target, exceptionBlock, lastIndex.Index - 1, arrayArguments, nestedInstruction,
+                out retIndex);
+        }
+        else
+        {
+            var dupInstruction = instructions[lastIndex.Index];
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Error,
+                () => $"{instruction}: expected Dup but found {dupInstruction}");
+            retIndex = default;
+            return false;
+        }
+    }
+
+
     private static string FindParameterName(MethodDefinition method, Instruction instruction)
     {
+        var debugInfo = method.DebugInformation;
+        if ( debugInfo != null)
+        {
+            var index = instruction.OpCode.Code switch
+            {
+                Code.Ldloc or Code.Ldloc_S or Code.Ldloca or Code.Ldloca_S => ((VariableDefinition)instruction.Operand).Index,
+                Code.Ldloc_0 => 0,
+                Code.Ldloc_1 => 1,
+                Code.Ldloc_2 => 2,
+                Code.Ldloc_3 => 3,
+                _ => -1
+            };
+
+            if (index != -1)
+            {
+                foreach (var scope in debugInfo.GetScopes())
+                {
+                    if (scope.Start.Offset < instruction.Offset || scope.End.Offset > instruction.Offset)
+                        continue;
+
+                    foreach (var variable in scope.Variables.Where(variable => variable.Index == index))
+                    {
+                        return variable.Name;
+                    }
+                }
+            }
+        }
+        
+        
         switch (instruction.OpCode.Code)
         {
             // Local variable loading
@@ -617,12 +778,52 @@ internal static class WrapDebugs
 
             // Array creation
             case Code.Newarr:
-                return "new " + instruction.Operand.ToString() + "[]";
+                return "new " + instruction.Operand + "[]";
 
             // Null and primitives
             case Code.Ldnull:
                 return "null";
 
+            // Integer constants
+            case Code.Ldc_I4:
+            case Code.Ldc_I4_S:
+                return ((int)instruction.Operand).ToString();
+            case Code.Ldc_I4_0:
+                return "0";
+            case Code.Ldc_I4_1:
+                return "1";
+            case Code.Ldc_I4_2:
+                return "2";
+            case Code.Ldc_I4_3:
+                return "3";
+            case Code.Ldc_I4_4:
+                return "4";
+            case Code.Ldc_I4_5:
+                return "5";
+            case Code.Ldc_I4_6:
+                return "6";
+            case Code.Ldc_I4_7:
+                return "7";
+            case Code.Ldc_I4_8:
+                return "8";
+            case Code.Ldc_I4_M1:
+                return "-1";
+
+            // Long integer constants
+            case Code.Ldc_I8:
+                return ((long)instruction.Operand).ToString();
+
+            // Floating-point constants
+            case Code.Ldc_R4:
+                return ((float)instruction.Operand).ToString("R");
+            case Code.Ldc_R8:
+                return ((double)instruction.Operand).ToString("R");
+
+            // String constants
+            case Code.Ldstr:
+                return EscapeForCode((string)instruction.Operand);
+
+            // Default case for any unhandled operand
             default:
                 var operand = instruction.Operand;
                 if (operand == null)
@@ -640,8 +841,8 @@ internal static class WrapDebugs
         return null;
     }
 
-
-    private static void ReplaceCallWithBepIn(MethodDefinition method, LogRedirects redirects, Collection<Instruction> instructions,
+    private static void ReplaceCallWithBepIn(MethodDefinition method, LogRedirects redirects,
+        Collection<Instruction> instructions,
         ref int index, MethodReference methodRef)
     {
         var instruction = instructions[index];
@@ -654,19 +855,28 @@ internal static class WrapDebugs
                 replacementMethod = parametersCount > 1 ? redirects.LOGInfoWithContextMethod : redirects.LOGInfoMethod;
                 break;
             case "LogError":
-                replacementMethod = parametersCount > 1 ? redirects.LOGErrorWithContextMethod : redirects.LOGErrorMethod;
+                replacementMethod =
+                    parametersCount > 1 ? redirects.LOGErrorWithContextMethod : redirects.LOGErrorMethod;
                 break;
             case "LogWarning":
-                replacementMethod = parametersCount > 1 ? redirects.LOGWarningWithContextMethod : redirects.LOGWarningMethod;
+                replacementMethod = parametersCount > 1
+                    ? redirects.LOGWarningWithContextMethod
+                    : redirects.LOGWarningMethod;
                 break;
             case "LogFormat":
-                replacementMethod = parametersCount > 2 ? redirects.LOGInfoFormatWithContextMethod : redirects.LOGInfoFormatMethod;
+                replacementMethod = parametersCount > 2
+                    ? redirects.LOGInfoFormatWithContextMethod
+                    : redirects.LOGInfoFormatMethod;
                 break;
             case "LogErrorFormat":
-                replacementMethod = parametersCount > 2 ? redirects.LOGErrorFormatWithContextMethod : redirects.LOGErrorFormatMethod;
+                replacementMethod = parametersCount > 2
+                    ? redirects.LOGErrorFormatWithContextMethod
+                    : redirects.LOGErrorFormatMethod;
                 break;
             case "LogWarningFormat":
-                replacementMethod = parametersCount > 2 ? redirects.LOGWarningFormatWithContextMethod : redirects.LOGWarningFormatMethod;
+                replacementMethod = parametersCount > 2
+                    ? redirects.LOGWarningFormatWithContextMethod
+                    : redirects.LOGWarningFormatMethod;
                 break;
         }
 
@@ -679,10 +889,10 @@ internal static class WrapDebugs
         }
     }
 
-    private static void ReplaceCallWithThrothledBepIn(MethodDefinition method, LogRedirects redirects, Collection<Instruction> instructions,
+    private static void ReplaceCallWithThrothledBepIn(MethodDefinition method, LogRedirects redirects,
+        Collection<Instruction> instructions,
         ref int index, ref int startIndex, MethodReference methodRef, long logkey)
     {
-        
         var instruction = instructions[index];
         MethodReference replacementMethod = null;
         var parametersCount = methodRef.Parameters.Count;
@@ -693,19 +903,28 @@ internal static class WrapDebugs
                 replacementMethod = parametersCount > 1 ? redirects.LOGInfoWithContextMethod : redirects.LOGInfoMethod;
                 break;
             case "LogError":
-                replacementMethod = parametersCount > 1 ? redirects.LOGErrorWithContextMethod : redirects.LOGErrorMethod;
+                replacementMethod =
+                    parametersCount > 1 ? redirects.LOGErrorWithContextMethod : redirects.LOGErrorMethod;
                 break;
             case "LogWarning":
-                replacementMethod = parametersCount > 1 ? redirects.LOGWarningWithContextMethod : redirects.LOGWarningMethod;
+                replacementMethod = parametersCount > 1
+                    ? redirects.LOGWarningWithContextMethod
+                    : redirects.LOGWarningMethod;
                 break;
             case "LogFormat":
-                replacementMethod = parametersCount > 2 ? redirects.LOGInfoFormatWithContextMethod : redirects.LOGInfoFormatMethod;
+                replacementMethod = parametersCount > 2
+                    ? redirects.LOGInfoFormatWithContextMethod
+                    : redirects.LOGInfoFormatMethod;
                 break;
             case "LogErrorFormat":
-                replacementMethod = parametersCount > 2 ? redirects.LOGErrorFormatWithContextMethod : redirects.LOGErrorFormatMethod;
+                replacementMethod = parametersCount > 2
+                    ? redirects.LOGErrorFormatWithContextMethod
+                    : redirects.LOGErrorFormatMethod;
                 break;
             case "LogWarningFormat":
-                replacementMethod = parametersCount > 2 ? redirects.LOGWarningFormatWithContextMethod : redirects.LOGWarningFormatMethod;
+                replacementMethod = parametersCount > 2
+                    ? redirects.LOGWarningFormatWithContextMethod
+                    : redirects.LOGWarningFormatMethod;
                 break;
         }
 
@@ -778,8 +997,8 @@ internal static class WrapDebugs
             return true;
         return opCode == OpCodes.Ldelem_U4;
     }
-    
-    static string EscapeForCode(string str)
+
+    private static string EscapeForCode(string str)
     {
         var sb = new StringBuilder();
         foreach (var c in str)
@@ -810,9 +1029,18 @@ internal static class WrapDebugs
                     {
                         sb.Append(c);
                     }
+
                     break;
             }
         }
-        return "\"" + sb.ToString() + "\"";
+
+        return "\"" + sb + "\"";
+    }
+
+    private struct StartIndex(int index, bool isStub = false, bool isDup = false)
+    {
+        internal readonly int Index = index;
+        internal readonly bool IsStub = isStub;
+        internal readonly bool IsDup = isDup;
     }
 }

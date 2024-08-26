@@ -18,8 +18,8 @@ internal static class PluginConfig
 
     internal static void Init()
     {
-        _config = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME, "Config.cfg"), true);
-        FilterConfig = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME, "LogLevels.cfg"), true);
+        _config = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME, "Config.cfg"), true, AsyncLoggers.Plugin);
+        FilterConfig = new ConfigFile(Utility.CombinePaths(Paths.ConfigPath, AsyncLoggers.NAME, "LogLevels.cfg"), true, AsyncLoggers.Plugin);
         XmlConfig.InitLogConfig();
 
         //Initialize Configs

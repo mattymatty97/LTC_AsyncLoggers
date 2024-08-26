@@ -1,3 +1,7 @@
+# v2.1.0
+- New API for registering ILogListeners ( API version 1.0.0 )
+- improved detection of `Debug.Log` calls ( Config version v1.1 )
+
 # v2.0.3
 - ensure assemblies in the LogWrapping pass are loaded in dependency order
 
