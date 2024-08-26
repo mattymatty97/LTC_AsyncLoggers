@@ -51,7 +51,7 @@ public static class AsyncLoggersAPI
     ///     will have a stack trace collected and stored. By default, this includes <see cref="LogLevel.Error" />
     ///     and <see cref="LogLevel.Fatal" />.
     /// </value>
-    public static LogLevel TraceableLevelsMaks { get; set; } = LogLevel.Error | LogLevel.Fatal;
+    public static LogLevel TraceableLevelsMask { get; set; } = LogLevel.Error | LogLevel.Fatal;
 
     /// <summary>
     ///     Updates the flags associated with a log listener.

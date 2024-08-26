@@ -398,7 +398,7 @@ internal static class AssemblyAnalyzer
                 }
 
                 var index1 = lastIndex;
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {index1}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {index1.Index}");
 
                 // If this is not the root call and the method returns void, continue searching
                 if (isRoot || method.ReturnType.MetadataType != MetadataType.Void)
@@ -565,7 +565,7 @@ internal static class AssemblyAnalyzer
                 // Process the second parameter
                 lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
 
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {lastIndex}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {lastIndex.Index}");
 
                 // If not root and no value is pushed, continue searching backwards
                 if (!isRoot && opCode.StackBehaviourPush == StackBehaviour.Push0)
@@ -616,7 +616,7 @@ internal static class AssemblyAnalyzer
                 lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
                 indexArgs.AddFirst(subArguments.AsChain());
 
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {lastIndex}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {lastIndex.Index}");
 
                 // If not root and no value is pushed, continue searching backwards
                 if (!isRoot && opCode.StackBehaviourPush == StackBehaviour.Push0)
@@ -786,8 +786,9 @@ internal static class AssemblyAnalyzer
 
             // Integer constants
             case Code.Ldc_I4:
-            case Code.Ldc_I4_S:
                 return ((int)instruction.Operand).ToString();
+            case Code.Ldc_I4_S:
+                return ((sbyte)instruction.Operand).ToString();
             case Code.Ldc_I4_0:
                 return "0";
             case Code.Ldc_I4_1:

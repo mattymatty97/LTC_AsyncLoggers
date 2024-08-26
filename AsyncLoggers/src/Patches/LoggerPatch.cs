@@ -37,7 +37,7 @@ internal class LoggerPatch
             return true;
         
         string stacktrace = null;
-        if ((eventArgs.Level & AsyncLoggersAPI.TraceableLevelsMaks) != 0 && sender is not ManualLogSource { SourceName: "Preloader" })
+        if ((eventArgs.Level & AsyncLoggersAPI.TraceableLevelsMask) != 0 && sender is not ManualLogSource { SourceName: "Preloader" })
         {
             stacktrace = Environment.StackTrace;
         }
