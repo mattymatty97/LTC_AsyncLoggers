@@ -209,6 +209,8 @@ internal static class AssemblyAnalyzer
         if (!method.HasBody)
             return;
 
+        var branches = GetBranchInstructions(method);
+
         var instructions = method.Body.Instructions;
         var exceptionHandlers = method.Body.ExceptionHandlers;
 
@@ -226,12 +228,58 @@ internal static class AssemblyAnalyzer
                     var exceptionBlock = GetCatchBlock(instruction, exceptionHandlers);
 
                     callCount++;
-                    HandleLogCall(assembly, type, method, exceptionBlock, normalRedirects, throttledRedirects,
+                    HandleLogCall(assembly, type, method, exceptionBlock, normalRedirects, throttledRedirects, branches,
                         ref instructions, ref i);
                 }
             }
         }
     }
+
+    private static Dictionary<Instruction, Instruction> GetBranchInstructions(MethodDefinition method)
+    {
+        var branchInstructions = new Dictionary<Instruction, Instruction>();
+        var instructions = method.Body.Instructions;
+
+        foreach (var instruction in instructions)
+        {
+            // Check for branch instructions
+            if (instruction.OpCode.FlowControl == FlowControl.Cond_Branch ||
+                instruction.OpCode.FlowControl == FlowControl.Branch)
+            {
+                // Get the target instruction
+                Instruction target;
+                if (instruction.Operand is Instruction targetInstruction)
+                {
+                    target = targetInstruction;
+                }
+                else if (instruction.Operand is int offset)
+                {
+                    // Calculate the target instruction for short branches
+                    int targetOffset = (int)instruction.Offset + offset;
+                    target = instructions.FirstOrDefault(i => i.Offset == targetOffset);
+                }
+                else
+                {
+                    continue;
+                }
+
+                // Map the target instruction to the branch instruction
+                if (target != null)
+                {
+                    branchInstructions[target] = instruction;
+                }
+            }
+        }
+
+        return branchInstructions;
+    }
+
+    private static Instruction GetBranchInstructionForTarget(Instruction target,
+        Dictionary<Instruction, Instruction> branchInstructions)
+    {
+        return branchInstructions.GetValueOrDefault(target);
+    }
+
 
     private static ExceptionHandler GetCatchBlock(Instruction instruction,
         Collection<ExceptionHandler> exceptionHandlers)
@@ -255,6 +303,7 @@ internal static class AssemblyAnalyzer
 
     private static void HandleLogCall(AssemblyDefinition assembly, TypeDefinition type, MethodDefinition method,
         ExceptionHandler exceptionBlock, LogRedirects normalRedirects, LogRedirects throttledRedirects,
+        Dictionary<Instruction, Instruction> branches,
         ref Collection<Instruction> instructions, ref int index)
     {
         var endIndex = index;
@@ -269,19 +318,23 @@ internal static class AssemblyAnalyzer
 
         var logDescription = new LinkedList<string>();
 
-        var startIndex = FindStartInstruction(method, exceptionBlock, index, logDescription, true).Index;
+        var startIndex = FindStartInstruction(method, exceptionBlock, branches, index, logDescription, false, true).Index;
 
         var logline = logDescription.AsParameters();
 
+        if (startIndex < 0)
+        {
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Error,
+                () => $"Method {typeName}:{methodName} has unsupported Log named \"{logline}\"");
+            return;
+        }
+
         AsyncLoggers.VerboseLogWrappingLog(LogLevel.Info,
             () => $"Method {typeName}:{methodName} has Log named \"{logline}\"");
-
+        
         var collection = instructions;
         var index1 = startIndex;
-        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () =>
-            index1 > 0
-                ? $"Found span:\n{string.Join("\n", collection.Skip(index1).Take(endIndex - index1 + 1))}"
-                : $"No span found: index is now {index1}");
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () =>$"Found span:\n{string.Join("\n", collection.Skip(index1).Take(endIndex - index1 + 1))}");
 
         var config = XmlConfig.LogCallInfo.GetOrAdd(assembly.Name.Name, type.FullName, method.Name, logline);
 
@@ -324,8 +377,9 @@ internal static class AssemblyAnalyzer
         }
     }
 
-    private static StartIndex FindStartInstruction(MethodDefinition target, ExceptionHandler exceptionBlock, int index,
-        LinkedList<string> arguments,
+    private static StartIndex FindStartInstruction(MethodDefinition target, ExceptionHandler exceptionBlock,
+        Dictionary<Instruction, Instruction> branches, int index,
+        LinkedList<string> arguments, bool isTernary = false,
         bool isRoot = false)
     {
         // Retrieve the list of IL instructions from the method body
@@ -362,7 +416,7 @@ internal static class AssemblyAnalyzer
             if (opCode.OpCodeType == OpCodeType.Prefix)
             {
                 AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction} is a Prefix ignoring!");
-                return FindStartInstruction(target, exceptionBlock, index - 1, arguments);
+                return FindStartInstruction(target, exceptionBlock, branches, index - 1, arguments);
             }
 
             // Handle duplication (Dup) instructions
@@ -374,6 +428,65 @@ internal static class AssemblyAnalyzer
 
 
             StartIndex lastIndex;
+
+            // Detect and handle the end of a ternary operation
+            if (!isTernary && !isRoot)
+            {
+                var nextInstruction = instruction.Next;
+                var branch = GetBranchInstructionForTarget(nextInstruction, branches);
+                if (branch != null && branch.OpCode.FlowControl != FlowControl.Cond_Branch)
+                {
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Message,
+                        () => $"{nextInstruction}: detected end of ternary Operator!");
+
+                    var operands = new string[3];
+                    var subArguments = new LinkedList<string>();
+                    //attempt to get the operand:
+
+                    var index1 = FindStartInstruction(target, exceptionBlock, branches, index, subArguments, true, isRoot).Index;
+                    operands[0] = subArguments.AsChain();
+
+                    var branch1 = instructions[index1 - 1];
+
+                    //we're at the split point!
+                    if (branch == branch1)
+                    {
+                        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                            () => $"{nextInstruction}: found first operator!");
+                        subArguments.Clear();
+                        var index2 = FindStartInstruction(target, exceptionBlock, branches, index1 - 2, subArguments,
+                            true).Index;
+                        operands[1] = subArguments.AsChain();
+
+                        var branch2 = instructions[index2 - 1];
+
+                        if (branch2.OpCode.FlowControl == FlowControl.Cond_Branch)
+                        {
+                            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                                () => $"{nextInstruction}: found second operator!");
+                            if (branch2.OpCode == OpCodes.Brfalse || branch2.OpCode == OpCodes.Brfalse_S)
+                            {
+                                (operands[0], operands[1]) = (operands[1], operands[0]);
+                            }
+                            
+                            subArguments.Clear();
+                            var index3 = FindStartInstruction(target, exceptionBlock, branches, index2 - 2, subArguments,
+                                true).Index;
+                            operands[2] = subArguments.AsChain();
+                            
+                            arguments.AddLast($"({operands[2]} ? {operands[1]} : {operands[0]})");
+                            return new StartIndex(index3);
+                        }
+                    }
+                }
+            }
+
+            if (instruction.OpCode == OpCodes.Br || instruction.OpCode.FlowControl == FlowControl.Cond_Branch)
+            {
+                //Opcode not supported!
+                return new StartIndex(-3);
+            }
+
             // Handle method calls (Call, Callvirt, Newobj)
             if (opCode == OpCodes.Call || opCode == OpCodes.Callvirt || opCode == OpCodes.Newobj)
             {
@@ -393,24 +506,23 @@ internal static class AssemblyAnalyzer
                 for (var i = 0; i < argumentCount; i++)
                 {
                     var argumentDescriptions = new LinkedList<string>();
-                    lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, argumentDescriptions);
+                    lastIndex = FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1,
+                        argumentDescriptions);
                     args.AddFirst(argumentDescriptions.AsChain());
                 }
 
                 var index1 = lastIndex;
                 AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {index1.Index}");
 
-                // If this is not the root call and the method returns void, continue searching
-                if (isRoot || method.ReturnType.MetadataType != MetadataType.Void)
+                // Handle property or method calls based on the IL instruction
+                if (isRoot || opCode == OpCodes.Newobj || method.ReturnType.MetadataType != MetadataType.Void)
                 {
-                    ProcessMethodCallOrProperty(instruction, method, args, arguments);
+                    ProcessMethodCallOrProperty(instruction, method, branches, args, arguments);
 
                     return lastIndex;
                 }
 
-                // Handle property or method calls based on the IL instruction
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
-                    () => $"{instruction}: was a stub - continue search");
+                // If this is not the root call and the method returns void, continue searching
                 lastIndex = new StartIndex(lastIndex.Index, true);
             }
             else
@@ -420,8 +532,16 @@ internal static class AssemblyAnalyzer
                     opCode.StackBehaviourPush != StackBehaviour.Push0)
                 {
                     AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
-                        () => $"{instruction}: startIndex {index} is Ld*");
-                    lastIndex = new StartIndex(index);
+                        () => $"{instruction}: is Ld*");
+
+                    if (HandleLdloc(target, exceptionBlock, branches, instruction, index, arguments, out lastIndex))
+                    {
+                        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                            () => $"{instruction}: startIndex {index}");
+                        return lastIndex;
+                    }
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                        () => $"{instruction}: startIndex {index}");
                 }
                 // Handle NOP instructions
                 else if (opCode is { StackBehaviourPop: StackBehaviour.Pop0, StackBehaviourPush: StackBehaviour.Push0 })
@@ -433,7 +553,7 @@ internal static class AssemblyAnalyzer
                 {
                     Dictionary<int, string> arrayElements = new Dictionary<int, string>();
                     if (opCode == OpCodes.Stelem_Ref && HandleStlelemRef(
-                            target, exceptionBlock, index, arrayElements,
+                            target, exceptionBlock, branches, index, arrayElements,
                             instruction, out var retIndex
                         ))
                     {
@@ -443,7 +563,8 @@ internal static class AssemblyAnalyzer
                     }
 
                     // Handle instructions that pop 1, 2, or 3 parameters
-                    lastIndex = HandlePopInstructions(opCode, target, exceptionBlock, index, arguments, isRoot,
+                    lastIndex = HandlePopInstructions(opCode, target, exceptionBlock, branches, index, arguments,
+                        isRoot,
                         instruction);
                 }
 
@@ -455,12 +576,17 @@ internal static class AssemblyAnalyzer
                     {
                         arguments.AddLast(varName);
                     }
-
-                    return lastIndex;
                 }
             }
 
-            return FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, arguments);
+            if (isRoot || !lastIndex.IsStub)
+            {
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                    () => $"{instruction}: was a stub - continue search");
+                return lastIndex;
+            }
+
+            return FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1, arguments);
         }
         catch (Exception ex)
         {
@@ -474,6 +600,7 @@ internal static class AssemblyAnalyzer
     }
 
     private static void ProcessMethodCallOrProperty(Instruction instruction, MethodReference method,
+        Dictionary<Instruction, Instruction> branches,
         LinkedList<string> args, LinkedList<string> arguments)
     {
         // Attempt to find a property based on the IL instruction
@@ -511,7 +638,7 @@ internal static class AssemblyAnalyzer
     }
 
     private static StartIndex HandlePopInstructions(OpCode opCode, MethodDefinition target,
-        ExceptionHandler exceptionBlock, int index,
+        ExceptionHandler exceptionBlock, Dictionary<Instruction, Instruction> branches, int index,
         LinkedList<string> arguments, bool isRoot, Instruction instruction)
     {
         StartIndex retIndex;
@@ -526,7 +653,7 @@ internal static class AssemblyAnalyzer
                 LinkedList<string> subArguments = new LinkedList<string>();
 
                 // Recursively find and process the previous instruction
-                var startIndex = FindStartInstruction(target, exceptionBlock, index - 1, subArguments).Index;
+                var startIndex = FindStartInstruction(target, exceptionBlock, branches, index - 1, subArguments).Index;
 
                 AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {startIndex}");
 
@@ -558,14 +685,15 @@ internal static class AssemblyAnalyzer
                 LinkedList<string> subArguments = new LinkedList<string>();
 
                 // Process the first parameter by recursively finding and processing the previous instruction
-                lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+                lastIndex = FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1, subArguments);
                 string indexArg = subArguments.AsChain();
                 subArguments.Clear();
 
                 // Process the second parameter
-                lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+                lastIndex = FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1, subArguments);
 
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {lastIndex.Index}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                    () => $"{instruction}: startIndex {lastIndex.Index}");
 
                 // If not root and no value is pushed, continue searching backwards
                 if (!isRoot && opCode.StackBehaviourPush == StackBehaviour.Push0)
@@ -584,7 +712,7 @@ internal static class AssemblyAnalyzer
                             arguments.AddLast(subArgument);
                         }
 
-                        arguments.AddLast($"{subArguments.Last.Value}{ new[]{indexArg}.FormatArray() }");
+                        arguments.AddLast($"{subArguments.Last.Value}{new[] { indexArg }.FormatArray()}");
                     }
                     else
                     {
@@ -605,18 +733,19 @@ internal static class AssemblyAnalyzer
                 LinkedList<string> indexArgs = new LinkedList<string>();
 
                 // Process the three parameters by recursively finding and processing the previous instructions
-                lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+                lastIndex = FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1, subArguments);
                 indexArgs.AddFirst(subArguments.AsChain());
                 subArguments.Clear();
 
-                lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+                lastIndex = FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1, subArguments);
                 indexArgs.AddFirst(subArguments.AsChain());
                 subArguments.Clear();
 
-                lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+                lastIndex = FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1, subArguments);
                 indexArgs.AddFirst(subArguments.AsChain());
 
-                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{instruction}: startIndex {lastIndex.Index}");
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                    () => $"{instruction}: startIndex {lastIndex.Index}");
 
                 // If not root and no value is pushed, continue searching backwards
                 if (!isRoot && opCode.StackBehaviourPush == StackBehaviour.Push0)
@@ -644,6 +773,7 @@ internal static class AssemblyAnalyzer
 
 
     private static bool HandleStlelemRef(MethodDefinition target, ExceptionHandler exceptionBlock,
+        Dictionary<Instruction, Instruction> branches,
         int index, Dictionary<int, string> arrayArguments, Instruction instruction, out StartIndex retIndex)
     {
         var instructions = target.Body.Instructions;
@@ -653,11 +783,11 @@ internal static class AssemblyAnalyzer
         LinkedList<string> subArguments = new LinkedList<string>();
 
         // Process the inserted parameter!
-        lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+        lastIndex = FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1, subArguments);
 
         // Process index!
         LinkedList<string> arrayIndex = new LinkedList<string>();
-        lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, arrayIndex);
+        lastIndex = FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1, arrayIndex);
 
         if (arrayIndex.Count != 1 || !int.TryParse(arrayIndex.First.Value, out var arrayIndexValue))
         {
@@ -669,14 +799,14 @@ internal static class AssemblyAnalyzer
 
         arrayArguments[arrayIndexValue] = subArguments.AsChain();
 
-        lastIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+        lastIndex = FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1, subArguments);
 
         if (lastIndex.IsDup)
         {
             var nestedInstruction = instructions[lastIndex.Index - 1];
             if (nestedInstruction.OpCode == OpCodes.Newarr)
             {
-                retIndex = FindStartInstruction(target, exceptionBlock, lastIndex.Index - 1, subArguments);
+                retIndex = FindStartInstruction(target, exceptionBlock, branches, lastIndex.Index - 1, subArguments);
                 return true;
             }
 
@@ -688,7 +818,8 @@ internal static class AssemblyAnalyzer
                 return false;
             }
 
-            return HandleStlelemRef(target, exceptionBlock, lastIndex.Index - 1, arrayArguments, nestedInstruction,
+            return HandleStlelemRef(target, exceptionBlock, branches, lastIndex.Index - 1, arrayArguments,
+                nestedInstruction,
                 out retIndex);
         }
         else
@@ -701,15 +832,57 @@ internal static class AssemblyAnalyzer
         }
     }
 
+    private static bool HandleLdloc(MethodDefinition target, ExceptionHandler exceptionBlock,
+        Dictionary<Instruction, Instruction> branches,Instruction instruction,
+        int index, LinkedList<string> arguments, out StartIndex retIndex)
+    {
+        var varIndex = instruction.OpCode.Code switch
+        {
+            Code.Ldloc or Code.Ldloc_S or Code.Ldloca or Code.Ldloca_S=> ((VariableDefinition)instruction.Operand)
+                .Index,
+            Code.Ldloc_0 => 0,
+            Code.Ldloc_1 => 1,
+            Code.Ldloc_2 => 2,
+            Code.Ldloc_3 => 3,
+            _ => -1
+        };
+
+        if (varIndex != -1)
+        {
+            var prec = instruction.Previous;
+            var prevIndex = prec.OpCode.Code switch
+            {
+                Code.Stloc or Code.Stloc_S => ((VariableDefinition)instruction.Operand).Index,
+                Code.Stloc_0 => 0,
+                Code.Stloc_1 => 1,
+                Code.Stloc_2 => 2,
+                Code.Stloc_3 => 3,
+                _ => -1
+            };
+
+            if (varIndex == prevIndex)
+            {
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                    () => $"{instruction}: has Matching is St*");
+                retIndex =  FindStartInstruction(target, exceptionBlock, branches, index - 1, arguments, false, true);
+                return true;
+            }
+        }
+
+        retIndex = new StartIndex(index);
+        return false;
+    }
+
 
     private static string FindParameterName(MethodDefinition method, Instruction instruction)
     {
         var debugInfo = method.DebugInformation;
-        if ( debugInfo != null)
+        if (debugInfo != null)
         {
             var index = instruction.OpCode.Code switch
             {
-                Code.Ldloc or Code.Ldloc_S or Code.Ldloca or Code.Ldloca_S => ((VariableDefinition)instruction.Operand).Index,
+                Code.Ldloc or Code.Ldloc_S or Code.Ldloca or Code.Ldloca_S => ((VariableDefinition)instruction.Operand)
+                    .Index,
                 Code.Ldloc_0 => 0,
                 Code.Ldloc_1 => 1,
                 Code.Ldloc_2 => 2,
@@ -731,8 +904,8 @@ internal static class AssemblyAnalyzer
                 }
             }
         }
-        
-        
+
+
         switch (instruction.OpCode.Code)
         {
             // Local variable loading
@@ -1049,17 +1222,17 @@ internal static class AssemblyAnalyzer
     {
         return $"({list.AsParameters()})";
     }
-    
+
     private static string FormatArray(this IEnumerable<string> list)
     {
         return $"[{list.AsParameters()}]";
     }
-    
+
     private static string AsParameters(this IEnumerable<string> list)
     {
         return string.Join(", ", list);
     }
-    
+
     private static string AsChain(this IEnumerable<string> list)
     {
         return string.Join(".", list);
