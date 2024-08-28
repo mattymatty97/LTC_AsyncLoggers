@@ -5,11 +5,12 @@ using Mono.Cecil.Cil;
 
 namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
-public class ReferenceCodeLine : ICodeLine
+public class SizeOfCodeLine : ICodeLine
 {
-    public ReferenceCodeLine(MethodDefinition method, Instruction instruction)
+    public SizeOfCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
+
         Method = method;
         EndInstruction = instruction;
 
@@ -17,6 +18,7 @@ public class ReferenceCodeLine : ICodeLine
 
         //Find the rest of the call
         Value = ICodeLine.InternalParseInstruction(method, instruction.Previous);
+
         if (Value != null)
             AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
                 () => $"{method.FullName}:{ICodeLine.PrintStack()} - Value found");
@@ -52,7 +54,7 @@ public class ReferenceCodeLine : ICodeLine
 
     public string ToString(bool isRoot)
     {
-        return $"&({Value?.ToString() ?? "|Value|"})";
+        return $"sizeof({Value?.ToString() ?? "|Value|"})";
     }
 
     public override string ToString()

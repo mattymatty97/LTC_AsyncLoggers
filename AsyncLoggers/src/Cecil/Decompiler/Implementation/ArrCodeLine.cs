@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using BepInEx.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -10,6 +10,7 @@ public class ArrCodeLine : ICodeLine
 {
     public ArrCodeLine(MethodDefinition method, Instruction instruction)
     {
+        ICodeLine.CurrentStack.Value.Push(this);
         Method = method;
 
         EndInstruction = instruction;
@@ -41,63 +42,85 @@ public class ArrCodeLine : ICodeLine
             _ => throw new InvalidOperationException()
         };
 
+
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+            () => $"{method.FullName}:{ICodeLine.PrintStack()} - {(IsStoring ? "Storing" : "Loading")}");
+
         if (IsStoring)
         {
-            
+            Value = ICodeLine.InternalParseInstruction(method, StartInstruction.Previous);
+
+            if (Value == null)
+                throw new InvalidOperationException(
+                    $"{Method.FullName}:IL_{EndInstruction.Offset:x4} Cannot find Value for Array Set");
+
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                () => $"{method.FullName}:{ICodeLine.PrintStack()} - Value found");
         }
-        //TODO read value
 
-        
+        Index = ICodeLine.InternalParseInstruction(method, StartInstruction.Previous);
 
+        if (Index == null)
+            throw new InvalidOperationException(
+                $"{Method.FullName}:IL_{EndInstruction.Offset:x4} Cannot find Index for Array Operation");
 
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+            () => $"{method.FullName}:{ICodeLine.PrintStack()} - Index found");
 
+        Array = ICodeLine.InternalParseInstruction(method, StartInstruction.Previous);
+
+        if (Array != null)
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                () => $"{method.FullName}:{ICodeLine.PrintStack()} - Array found");
+
+        ICodeLine.CurrentStack.Value.Pop();
     }
 
     public bool IsStoring { get; }
 
-    private LinkedList<ICodeLine> Arguments { get; } = [];
-    public bool HasReturn => true;
+    public ICodeLine Array { get; set; }
+    public ICodeLine Index { get; set; }
+    public ICodeLine Value { get; set; }
+
+    public bool HasReturn => !IsStoring;
     public MethodDefinition Method { get; }
-    public Instruction StartInstruction => Arguments.First?.Value?.StartInstruction ?? EndInstruction;
+
+    public Instruction StartInstruction => Array?.StartInstruction ?? Index?.StartInstruction ??
+        (IsStoring ? Value?.StartInstruction ?? EndInstruction : EndInstruction);
+
     public Instruction EndInstruction { get; }
 
-    public bool IsMissingArgument => (IsStoring ? Arguments.Count < 3 : Arguments.Count < 2) ||
-                                     Arguments.Any(a => a.IsMissingArgument);
+    public bool IsIncomplete => (Array?.IsIncomplete ?? true) || (Index?.IsIncomplete ?? true) ||
+                                (Value?.IsIncomplete ?? IsStoring);
 
     public IEnumerable<ICodeLine> GetArguments()
     {
-        return Arguments.ToArray();
+        return IsStoring ? [Array, Index, Value] : [Array, Index];
     }
 
     public string ToString(bool isRoot)
     {
-        var list = Arguments.ToList();
-        
         if (IsStoring)
-            return (isRoot ? $"{list[0]}[{list[1]}] = " : "") + list[2];
+            return $"{Array}[{Index}] = {Value}";
 
-        return $"{list[0]}[{list[1]}]";
+        return $"{Array}[{Index}]";
     }
 
     public bool SetMissingArgument(ICodeLine codeLine)
     {
-        if (!IsMissingArgument)
+        if (!IsIncomplete)
             return false;
 
-        if (IsStoring ? Arguments.Count < 3 : Arguments.Count < 2)
-        {
-            Arguments.AddFirst(codeLine);
-            return IsMissingArgument;
-        }
-        
-        var @fixed = true;
-        
-        foreach (var argument in Arguments)
-        {
-            @fixed &= argument?.SetMissingArgument(codeLine) ?? false;
-        }
+        if (Array == null)
+            Array = codeLine;
+        else
+            Array.SetMissingArgument(codeLine);
 
-        return @fixed;
+        Index.SetMissingArgument(codeLine);
+
+        Value?.SetMissingArgument(codeLine);
+
+        return IsIncomplete;
     }
 
     public override string ToString()

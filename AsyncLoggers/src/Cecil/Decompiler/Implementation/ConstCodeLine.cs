@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using BepInEx.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -8,31 +9,9 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class ConstCodeLine : ICodeLine
 {
-    public object Primitive { get; }
-
-    public bool HasReturn => true;
-    public MethodDefinition Method { get; }
-
-    public Instruction StartInstruction => EndInstruction;
-    public Instruction EndInstruction { get; }
-
-    public IEnumerable<ICodeLine> GetArguments()
-    {
-        return [];
-    }
-
-    public override string ToString()
-    {
-        return ToString(false);
-    }
-
-    public string ToString(bool isRoot)
-    {
-        return Primitive.ToString();
-    }
-
     public ConstCodeLine(MethodDefinition method, Instruction instruction)
     {
+        ICodeLine.CurrentStack.Value.Push(this);
         Method = method;
 
         EndInstruction = instruction;
@@ -40,7 +19,7 @@ public class ConstCodeLine : ICodeLine
         Primitive = instruction.OpCode.Code switch
         {
             // Null and primitives
-            Code.Ldnull => null,
+            Code.Ldnull => "null",
             Code.Ldc_I4
                 or Code.Ldc_I8
                 or Code.Ldc_R4
@@ -65,20 +44,48 @@ public class ConstCodeLine : ICodeLine
             Code.Ldstr => EscapeForCode((string)instruction.Operand),
             _ => throw new ArgumentOutOfRangeException(nameof(instruction))
         };
+
+
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+            () => $"{method.FullName}:{ICodeLine.PrintStack()} - {Primitive}");
+
+        ICodeLine.CurrentStack.Value.Pop();
     }
 
-    public bool IsMissingArgument => false;
+    public object Primitive { get; }
+
+    public bool HasReturn => true;
+    public MethodDefinition Method { get; }
+
+    public Instruction StartInstruction => EndInstruction;
+    public Instruction EndInstruction { get; }
+
+    public IEnumerable<ICodeLine> GetArguments()
+    {
+        return [];
+    }
+
+    public string ToString(bool isRoot)
+    {
+        return Primitive.ToString();
+    }
+
+    public bool IsIncomplete => false;
 
     public bool SetMissingArgument(ICodeLine codeLine)
     {
         return false;
     }
 
+    public override string ToString()
+    {
+        return ToString(false);
+    }
+
     private static string EscapeForCode(string str)
     {
         var sb = new StringBuilder();
         foreach (var c in str)
-        {
             switch (c)
             {
                 case '\\':
@@ -98,17 +105,12 @@ public class ConstCodeLine : ICodeLine
                     break;
                 default:
                     if (c < 32 || c > 126) // Non-printable or extended ASCII characters
-                    {
                         sb.AppendFormat("\\u{0:X4}", (int)c);
-                    }
                     else
-                    {
                         sb.Append(c);
-                    }
 
                     break;
             }
-        }
 
         return "\"" + sb + "\"";
     }

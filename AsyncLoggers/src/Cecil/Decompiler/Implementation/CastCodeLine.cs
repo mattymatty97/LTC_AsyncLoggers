@@ -1,5 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using BepInEx.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -7,55 +7,60 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class CastCodeLine : ICodeLine
 {
+    public CastCodeLine(MethodDefinition method, Instruction instruction)
+    {
+        ICodeLine.CurrentStack.Value.Push(this);
+        Method = method;
+        EndInstruction = instruction;
+
+        Type = (TypeReference)instruction.Operand;
+
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+            () => $"{method.FullName}:{ICodeLine.PrintStack()} - {Type.FullName}");
+
+        Value = ICodeLine.InternalParseInstruction(method, instruction.Previous);
+
+        if (Value != null)
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                () => $"{method.FullName}:{ICodeLine.PrintStack()} - Value found");
+
+        ICodeLine.CurrentStack.Value.Pop();
+    }
+
+    public TypeReference Type { get; }
+    public ICodeLine Value { get; private set; }
     public bool HasReturn => true;
     public MethodDefinition Method { get; }
     public Instruction StartInstruction => EndInstruction;
     public Instruction EndInstruction { get; }
 
-    public TypeReference Type { get; }
-    public ICodeLine Value { get; private set; }
-    
     public IEnumerable<ICodeLine> GetArguments()
     {
         return [Value];
     }
 
-    public bool IsMissingArgument => Value?.IsMissingArgument ?? true;
-    
+    public bool IsIncomplete => Value?.IsIncomplete ?? true;
+
     public bool SetMissingArgument(ICodeLine codeLine)
     {
-        if (!IsMissingArgument)
+        if (!IsIncomplete)
             return false;
 
         if (Value == null)
-        {
             Value = codeLine;
-        }
         else
-        {
             return Value.SetMissingArgument(codeLine);
-        }
-        
+
         return true;
     }
 
-    public CastCodeLine(MethodDefinition method, Instruction instruction)
+    public string ToString(bool isRoot)
     {
-        Method = method;
-        EndInstruction = instruction;
-
-        Type = (TypeReference) instruction.Operand;
-        
-        Value = ICodeLine.InternalParseInstruction(method, instruction.Previous);
+        return $"(({Type.FullName}){Value?.ToString() ?? "|Value|"})";
     }
 
     public override string ToString()
     {
         return ToString(false);
-    }
-    
-    public string ToString(bool isRoot)
-    {
-        return $"(({Type.FullName}){Value?.ToString() ?? "|Value|"})";
     }
 }

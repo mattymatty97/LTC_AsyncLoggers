@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using BepInEx.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -8,27 +9,11 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class FieldCodeLine : ICodeLine
 {
-    public bool IsStoring { get; }
-    
-    public bool IsStatic { get; }
-    public FieldReference Field { get; }
-    
-    private LinkedList<ICodeLine> Arguments { get; } = [];
-
-    public bool HasReturn => !IsStoring;
-    public MethodDefinition Method { get; }
-    public Instruction StartInstruction => Arguments.First()?.StartInstruction ?? EndInstruction;
-    public Instruction EndInstruction { get; }
-    
-    public IEnumerable<ICodeLine> GetArguments()
-    {
-        return Arguments.ToArray();
-    }
-
     public FieldCodeLine(MethodDefinition method, Instruction instruction)
     {
+        ICodeLine.CurrentStack.Value.Push(this);
         Method = method;
-        
+
         EndInstruction = instruction;
 
         IsStoring = instruction.OpCode.Code switch
@@ -37,60 +22,95 @@ public class FieldCodeLine : ICodeLine
             Code.Stfld or Code.Stsfld => true,
             _ => throw new ArgumentOutOfRangeException(nameof(instruction))
         };
-        
+
         IsStatic = instruction.OpCode.Code switch
         {
-            Code.Ldfld or Code.Ldflda or Code.Stfld=> false,
-            Code.Stsfld or Code.Ldsfld or Code.Ldsflda=> true,
+            Code.Ldfld or Code.Ldflda or Code.Stfld => false,
+            Code.Stsfld or Code.Ldsfld or Code.Ldsflda => true,
             _ => throw new ArgumentOutOfRangeException(nameof(instruction))
         };
 
         Field = (FieldReference)instruction.Operand;
 
-        
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+            () => $"{method.FullName}:{ICodeLine.PrintStack()} - {(IsStoring ? "Storing" : "Loading")} {Field.Name}");
+
         if (IsStoring)
         {
-            var argument = ICodeLine.InternalParseInstruction(method, instruction.Previous);
-            if (argument == null)
-                throw new InvalidOperationException($"{Method.FullName}:IL_{EndInstruction.Offset} Cannot find Value for field store");
-            Arguments.AddFirst(argument);
-        }
-        
-        if (!IsStatic)
-        {
-            var argument = ICodeLine.InternalParseInstruction(method, instruction.Previous);
-            if (argument == null)
-                throw new InvalidOperationException($"{Method.FullName}:IL_{EndInstruction.Offset} Cannot find object for instance field");
-            Arguments.AddFirst(argument);
-        }
-        
-    }
-    
-    public bool IsMissingArgument => Arguments.Any(a => a.IsMissingArgument);
-    
-    public bool SetMissingArgument(ICodeLine codeLine)
-    {
-        if (!IsMissingArgument)
-            return false;
-        
-        var @fixed = true;
-        
-        foreach (var argument in GetArguments())
-        {
-            @fixed &= argument?.SetMissingArgument(codeLine) ?? false;
+            Value = ICodeLine.InternalParseInstruction(method, instruction.Previous);
+            if (Value == null)
+                throw new InvalidOperationException(
+                    $"{Method.FullName}:IL_{EndInstruction.Offset:x4} Cannot find Value for field store");
+
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                () => $"{method.FullName}:{ICodeLine.PrintStack()} - Value found");
         }
 
-        return @fixed;
+        if (!IsStatic)
+        {
+            Instance = ICodeLine.InternalParseInstruction(method, instruction.Previous);
+            if (Instance != null)
+            {
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                    () => $"{method.FullName}:{ICodeLine.PrintStack()} - Instance found");
+                Value?.SetMissingArgument(Instance);
+            }
+        }
+
+        ICodeLine.CurrentStack.Value.Pop();
+    }
+
+    public bool IsStoring { get; }
+
+    public bool IsStatic { get; }
+    public FieldReference Field { get; }
+
+    public ICodeLine Value { get; }
+
+    public ICodeLine Instance { get; private set; }
+    public bool HasReturn => !IsStoring;
+    public MethodDefinition Method { get; }
+    public Instruction StartInstruction => Instance?.StartInstruction ?? Value?.StartInstruction ?? EndInstruction;
+    public Instruction EndInstruction { get; }
+
+    public IEnumerable<ICodeLine> GetArguments()
+    {
+        var arguments = new LinkedList<ICodeLine>();
+
+        if (IsStoring)
+            arguments.AddFirst(Value);
+
+        if (!IsStatic)
+            arguments.AddFirst(Instance);
+
+        return arguments.ToArray();
+    }
+
+    public bool IsIncomplete => (Instance?.IsIncomplete ?? true) || (Value?.IsIncomplete ?? true);
+
+    public bool SetMissingArgument(ICodeLine codeLine)
+    {
+        if (!IsIncomplete)
+            return false;
+
+        if (Instance == null)
+            Instance = codeLine;
+        else
+            Instance.SetMissingArgument(codeLine);
+
+        Value?.SetMissingArgument(codeLine);
+
+        return IsIncomplete;
+    }
+
+    public string ToString(bool isRoot)
+    {
+        var text = (IsStatic ? $"{Field.DeclaringType.FullName}" : Instance) + "." + Field.Name;
+        return IsStoring ? $"{text} = {Value}" : text;
     }
 
     public override string ToString()
     {
         return ToString(false);
-    }
-    
-    public string ToString(bool isRoot)
-    {
-        var text = (IsStatic ? $"{Field.DeclaringType.FullName}" : Arguments.First()) + "." + Field.Name;
-        return IsStoring ? $"{text} = {Arguments.Last()}" : text;
     }
 }

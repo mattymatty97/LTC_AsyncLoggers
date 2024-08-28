@@ -6,54 +6,49 @@ namespace AsyncLoggers.Cecil;
 
 public static class ThrothledLogWrapper
 {
-    internal static long CurrID => _currID;
-    internal static long NextID => Interlocked.Increment(ref _currID);
-
     private static readonly ConcurrentDictionary<long, DateTime> TimestampMemory = [];
     internal static readonly ConcurrentDictionary<long, TimeSpan> CooldownMemory = [];
     private static long _currID;
+    internal static long CurrID => _currID;
+    internal static long NextID => Interlocked.Increment(ref _currID);
 
     private static bool InCooldown(long key)
     {
         if (TimestampMemory.TryGetValue(key, out var timestamp))
-        {
             if (DateTime.UtcNow - timestamp < CooldownMemory[key])
-            {
                 return true;
-            }
-        }
-        
+
         TimestampMemory[key] = DateTime.UtcNow;
-        
+
         return false;
     }
-    
-    
+
+
     // Method for logs without context
     public static void LogInfo(long logKey, object message)
     {
-        if(InCooldown(logKey))
+        if (InCooldown(logKey))
             return;
-        
+
         AsyncLoggers.WrappedUnitySource.LogInfo(message);
     }
 
     public static void LogError(long logKey, object message)
     {
-        if (InCooldown(logKey)) 
+        if (InCooldown(logKey))
             return;
-        
+
         AsyncLoggers.WrappedUnitySource.LogError(message);
     }
 
     public static void LogWarning(long logKey, object message)
     {
-        if(InCooldown(logKey))
+        if (InCooldown(logKey))
             return;
-        
+
         AsyncLoggers.WrappedUnitySource.LogWarning(message);
     }
-    
+
     public static void LogInfoFormat(long logKey, string format, params object[] args)
     {
         var message = string.Format(format, args);

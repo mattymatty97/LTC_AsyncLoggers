@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using AsyncLoggers.Cecil.Decompiler.Implementation;
 using AsyncLoggers.Cecil.Decompiler.Implementation.Composite;
+using BepInEx.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -11,74 +12,87 @@ namespace AsyncLoggers.Cecil.Decompiler;
 
 public interface ICodeLine
 {
+    private static readonly ThreadLocal<ExceptionHandler> CurrentExceptionHandler = new(() => null);
+
+    private static readonly ThreadLocal<Dictionary<Instruction, ICollection<Instruction>>> CurrentBranches =
+        new(() => []);
+
+    internal static readonly ThreadLocal<ISet<Instruction>> CurrentVisitedInstructions =
+        new(() => new HashSet<Instruction>());
+
+    internal static readonly ThreadLocal<Stack<ICodeLine>> CurrentStack = new(() => new Stack<ICodeLine>());
     public bool HasReturn { get; }
     public MethodDefinition Method { get; }
     public Instruction StartInstruction { get; }
     public Instruction EndInstruction { get; }
-    
-    public IEnumerable<ICodeLine> GetArguments();
 
-    public bool IsMissingArgument { get; }
+    public bool IsIncomplete { get; }
+
+    public IEnumerable<ICodeLine> GetArguments();
 
     public bool SetMissingArgument(ICodeLine codeLine);
 
     public string ToString(bool isRoot);
 
-
-    private static readonly ThreadLocal<ExceptionHandler> CurrentExceptionHandler = new(() => null);
-    private static readonly ThreadLocal<Dictionary<Instruction, ICollection<Instruction>>> CurrentBranches = new(() => []);
-    internal static readonly ThreadLocal<ISet<Instruction>> CurrentVisitedBranches = new(() => new HashSet<Instruction>());
-
     public static ICodeLine ParseInstruction(MethodDefinition method, Instruction instruction)
     {
-        CurrentVisitedBranches.Value.Clear();
+        CurrentVisitedInstructions.Value.Clear();
         CurrentBranches.Value.Clear();
+        CurrentStack.Value.Clear();
         GenBranchInstructions(method);
         var exceptionHandler = GetCatchBlock(instruction, method.Body.ExceptionHandlers);
         CurrentExceptionHandler.Value = exceptionHandler;
 
+        CurrentVisitedInstructions.Value.Add(instruction);
+
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"Starting Processing {instruction}");
+
         return InternalParseInstruction(method, instruction, false);
     }
 
-    internal static ICodeLine InternalParseInstruction(MethodDefinition method, Instruction instruction, bool needsReturn = true)
+    internal static ICodeLine InternalParseInstruction(MethodDefinition method, Instruction instruction,
+        bool needsReturn = true)
     {
         var codeLine = _InternalParseInstruction(method, instruction);
-        
+
         while (codeLine is { HasReturn: false } && needsReturn)
         {
-            //TODO: Log retry!
-            codeLine = _InternalParseInstruction(method, instruction);
-        } 
+            var line = codeLine;
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                () => $"{method.FullName}:{PrintStack()} - {line} had no return retry!");
+            codeLine = _InternalParseInstruction(method, codeLine.StartInstruction.Previous);
+        }
 
         return codeLine;
     }
-    
+
     private static ICodeLine _InternalParseInstruction(MethodDefinition method, Instruction instruction)
     {
-
         var exceptionHandler = GetCatchBlock(instruction, method.Body.ExceptionHandlers);
 
-        if (CurrentExceptionHandler.Value != exceptionHandler)
-        {
-            return new ExceptionCodeLine(method, instruction.Next);
-        }
+        if (CurrentExceptionHandler.Value != exceptionHandler) return new ExceptionCodeLine(method, instruction.Next);
 
-        if (!CurrentVisitedBranches.Value.Contains(instruction))
+        if (!CurrentVisitedInstructions.Value.Contains(instruction))
         {
             var nextInstruction = instruction.Next;
             var branches = GetBranchInstructionForTarget(nextInstruction);
             if (branches.Count == 1 && branches.First().OpCode.FlowControl != FlowControl.Cond_Branch)
-                return new TernaryCodeLine(method, instruction);
+            {
+                var line = new TernaryCodeLine(method, instruction);
+
+                if (line.Error == null)
+                    return line;
+
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, line.Error);
+            }
         }
 
-        if (instruction.OpCode == OpCodes.Br || instruction.OpCode.FlowControl != FlowControl.Call)
-        {
-            return null;
-        }
+        if (instruction.OpCode == OpCodes.Br || instruction.OpCode == OpCodes.Br_S ||
+            instruction.OpCode.FlowControl == FlowControl.Cond_Branch) return new DupCodeLine(method, instruction);
 
         if (instruction.OpCode.OpCodeType == OpCodeType.Prefix)
             return new NopCodeLine(method, instruction);
-        
+
 
         switch (instruction.OpCode.Code)
         {
@@ -105,7 +119,13 @@ public interface ICodeLine
                 var val = new LocalCodeLine(method, instruction);
                 var prev = InternalParseInstruction(method, val.StartInstruction.Previous, false);
                 if (prev is LocalCodeLine { IsStoring: true } codeLine && codeLine.Index == val.Index)
+                {
+                    AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                        () =>
+                            $"{method.FullName}:{PrintStack()} - Local Load had a matching Store - restarting from Value!");
                     return codeLine.Value;
+                }
+
                 return val;
             case Code.Stloc_0:
             case Code.Stloc_1:
@@ -114,7 +134,7 @@ public interface ICodeLine
             case Code.Stloc:
             case Code.Stloc_S:
                 return new LocalCodeLine(method, instruction);
-            
+
             case Code.Ldftn:
             case Code.Ldvirtftn:
             case Code.Ldtoken:
@@ -136,7 +156,7 @@ public interface ICodeLine
             case Code.Ldc_R4:
             case Code.Ldc_R8:
                 return new ConstCodeLine(method, instruction);
-            
+
             case Code.Ldfld:
             case Code.Ldflda:
             case Code.Stfld:
@@ -144,16 +164,16 @@ public interface ICodeLine
             case Code.Ldsflda:
             case Code.Stsfld:
                 return new FieldCodeLine(method, instruction);
-            
+
             case Code.Dup:
                 return new DupCodeLine(method, instruction);
-            
+
             case Code.Call:
             case Code.Calli:
             case Code.Callvirt:
             case Code.Newobj:
                 return new MethodCodeLine(method, instruction);
-            
+
             case Code.Add_Ovf:
             case Code.Add_Ovf_Un:
             case Code.Mul_Ovf:
@@ -178,15 +198,15 @@ public interface ICodeLine
             case Code.Cgt_Un:
             case Code.Clt:
             case Code.Clt_Un:
-                break;
-            
+                return new ArithmeticCodeLine(method, instruction);
+
             case Code.Neg:
             case Code.Not:
-                break;
-            
+                return new NegationCodeLine(method, instruction);
+
             case Code.Refanyval:
                 return new ReferenceCodeLine(method, instruction);
-            
+
             case Code.Ldobj:
             case Code.Ldind_I1:
             case Code.Ldind_U1:
@@ -208,20 +228,24 @@ public interface ICodeLine
             case Code.Stind_R4:
             case Code.Stind_R8:
                 return new DeReferenceCodeLine(method, instruction);
-            
+
             case Code.Isinst:
             case Code.Castclass:
                 return new CastCodeLine(method, instruction);
-            
+
             case Code.Refanytype:
+            case Code.Mkrefany:
                 return new TypeOfCodeLine(method, instruction);
-            
+
+            case Code.Sizeof:
+                return new SizeOfCodeLine(method, instruction);
+
             case Code.Newarr:
                 return new NewArrCodeLine(method, instruction);
-            
+
             case Code.Ldlen:
                 return new ArrLenCodeLine(method, instruction);
-            
+
             case Code.Ldelema:
             case Code.Ldelem_I1:
             case Code.Ldelem_U1:
@@ -235,6 +259,8 @@ public interface ICodeLine
             case Code.Ldelem_R8:
             case Code.Ldelem_Ref:
             case Code.Ldelem_Any:
+                return new ArrCodeLine(method, instruction);
+
             case Code.Stelem_I:
             case Code.Stelem_I1:
             case Code.Stelem_I2:
@@ -244,34 +270,79 @@ public interface ICodeLine
             case Code.Stelem_R8:
             case Code.Stelem_Ref:
             case Code.Stelem_Any:
-                break;
+
+                if (CurrentVisitedInstructions.Value.Contains(instruction))
+                    return new ArrCodeLine(method, instruction);
+
+                var line = new InlineArrayCodeLine(method, instruction);
+
+                if (line.Error == null)
+                    return line;
+
+                AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, line.Error);
+
+                return new ArrCodeLine(method, instruction);
+
+            case Code.Nop:
+            case Code.Conv_I1:
+            case Code.Conv_I2:
+            case Code.Conv_I4:
+            case Code.Conv_I8:
+            case Code.Conv_R4:
+            case Code.Conv_R8:
+            case Code.Conv_U4:
+            case Code.Conv_U8:
+            case Code.Conv_R_Un:
+            case Code.Conv_Ovf_I1_Un:
+            case Code.Conv_Ovf_I2_Un:
+            case Code.Conv_Ovf_I4_Un:
+            case Code.Conv_Ovf_I8_Un:
+            case Code.Conv_Ovf_U1_Un:
+            case Code.Conv_Ovf_U2_Un:
+            case Code.Conv_Ovf_U4_Un:
+            case Code.Conv_Ovf_U8_Un:
+            case Code.Conv_Ovf_I_Un:
+            case Code.Conv_Ovf_U_Un:
+            case Code.Conv_Ovf_I1:
+            case Code.Conv_Ovf_U1:
+            case Code.Conv_Ovf_I2:
+            case Code.Conv_Ovf_U2:
+            case Code.Conv_Ovf_I4:
+            case Code.Conv_Ovf_U4:
+            case Code.Conv_Ovf_I8:
+            case Code.Conv_Ovf_U8:
+            case Code.Conv_U2:
+            case Code.Conv_U1:
+            case Code.Conv_I:
+            case Code.Conv_U:
+            case Code.Conv_Ovf_I:
+            case Code.Conv_Ovf_U:
+            case Code.Ckfinite:
+            case Code.Unbox:
+            case Code.Unbox_Any:
+            case Code.Box:
+                return new NopCodeLine(method, instruction);
         }
-        
+
         if (instruction.OpCode is { StackBehaviourPop: StackBehaviour.Pop0, StackBehaviourPush: StackBehaviour.Push0 })
             return new NopCodeLine(method, instruction);
 
-        return null;
+        throw new NotImplementedException($"{method.FullName}:{PrintStack()} {instruction}");
     }
-    
+
     private static ExceptionHandler GetCatchBlock(Instruction instruction,
         ICollection<ExceptionHandler> exceptionHandlers)
     {
         foreach (var handler in exceptionHandlers)
-        {
             if (handler.HandlerType == ExceptionHandlerType.Catch)
-            {
                 // Check if the instruction is within the bounds of the catch block
                 if (instruction.Offset >= handler.HandlerStart.Offset &&
                     instruction.Offset <= handler.HandlerEnd.Offset)
-                {
                     return handler;
-                }
-            }
-        }
 
         return null;
     }
-    
+
     private static void GenBranchInstructions(MethodDefinition method)
     {
         var branchInstructions = CurrentBranches.Value;
@@ -281,9 +352,9 @@ public interface ICodeLine
         {
             // Check for branch instructions
             if (instruction.OpCode.FlowControl != FlowControl.Cond_Branch &&
-                instruction.OpCode.FlowControl != FlowControl.Branch) 
+                instruction.OpCode.FlowControl != FlowControl.Branch)
                 continue;
-            
+
             // Get the target instruction
             Instruction target;
             switch (instruction.Operand)
@@ -303,7 +374,7 @@ public interface ICodeLine
             }
 
             // Map the target instruction to the branch instruction
-            if (target == null) 
+            if (target == null)
                 continue;
 
             if (!branchInstructions.TryGetValue(target, out var list))
@@ -311,7 +382,7 @@ public interface ICodeLine
                 list = new List<Instruction>();
                 branchInstructions[target] = list;
             }
-                    
+
             list.Add(instruction);
         }
     }
@@ -320,5 +391,11 @@ public interface ICodeLine
     {
         return CurrentBranches.Value?.GetValueOrDefault(target, []);
     }
-    
+
+    internal static string PrintStack()
+    {
+        return string.Join("->",
+            CurrentStack.Value.Select(cl =>
+                $"(IL_{cl.EndInstruction.Offset:x4}:{cl.EndInstruction.OpCode} - {cl.GetType().Name})").Reverse());
+    }
 }

@@ -17,7 +17,7 @@ public static class LogWrapper
     {
         AsyncLoggers.WrappedUnitySource.LogWarning(message);
     }
-    
+
     public static void LogInfoFormat(string format, params object[] args)
     {
         var message = string.Format(format, args);

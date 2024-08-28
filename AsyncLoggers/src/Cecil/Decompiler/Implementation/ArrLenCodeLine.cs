@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Collections.Generic;
+using BepInEx.Logging;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
@@ -10,11 +9,21 @@ public class ArrLenCodeLine : ICodeLine
 {
     public ArrLenCodeLine(MethodDefinition method, Instruction instruction)
     {
+        ICodeLine.CurrentStack.Value.Push(this);
         Method = method;
 
         EndInstruction = instruction;
 
+
+        AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug, () => $"{method.FullName}:{ICodeLine.PrintStack()}");
+
         Array = ICodeLine.InternalParseInstruction(method, instruction.Previous);
+
+        if (Array != null)
+            AsyncLoggers.VerboseLogWrappingLog(LogLevel.Debug,
+                () => $"{method.FullName}:{ICodeLine.PrintStack()} - Array found");
+
+        ICodeLine.CurrentStack.Value.Pop();
     }
 
     public ICodeLine Array { get; private set; }
@@ -23,7 +32,7 @@ public class ArrLenCodeLine : ICodeLine
     public Instruction StartInstruction => Array?.StartInstruction ?? EndInstruction;
     public Instruction EndInstruction { get; }
 
-    public bool IsMissingArgument => Array?.IsMissingArgument ?? true;
+    public bool IsIncomplete => Array?.IsIncomplete ?? true;
 
     public IEnumerable<ICodeLine> GetArguments()
     {
@@ -37,19 +46,15 @@ public class ArrLenCodeLine : ICodeLine
 
     public bool SetMissingArgument(ICodeLine codeLine)
     {
-        if (!IsMissingArgument)
+        if (!IsIncomplete)
             return false;
 
         if (Array == null)
-        {
             Array = codeLine;
-        }
         else
-        {
             Array.SetMissingArgument(codeLine);
-        }
 
-        return IsMissingArgument;
+        return IsIncomplete;
     }
 
     public override string ToString()
