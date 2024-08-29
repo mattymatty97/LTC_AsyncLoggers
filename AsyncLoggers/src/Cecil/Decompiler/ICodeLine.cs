@@ -12,15 +12,6 @@ namespace AsyncLoggers.Cecil.Decompiler;
 
 public interface ICodeLine
 {
-    private static readonly ThreadLocal<ExceptionHandler> CurrentExceptionHandler = new(() => null);
-
-    private static readonly ThreadLocal<Dictionary<Instruction, ICollection<Instruction>>> CurrentBranches =
-        new(() => []);
-
-    internal static readonly ThreadLocal<ISet<Instruction>> CurrentVisitedInstructions =
-        new(() => new HashSet<Instruction>());
-
-    internal static readonly ThreadLocal<Stack<ICodeLine>> CurrentStack = new(() => new Stack<ICodeLine>());
     public bool HasReturn { get; }
     public MethodDefinition Method { get; }
     public Instruction StartInstruction { get; }
@@ -33,6 +24,21 @@ public interface ICodeLine
     public bool SetMissingArgument(ICodeLine codeLine);
 
     public string ToString(bool isRoot);
+    
+    
+    /**
+     * STATIC LOGIC
+     */
+    
+    private static readonly ThreadLocal<ExceptionHandler> CurrentExceptionHandler = new(() => null);
+
+    private static readonly ThreadLocal<Dictionary<Instruction, ICollection<Instruction>>> CurrentBranches =
+        new(() => []);
+
+    internal static readonly ThreadLocal<ISet<Instruction>> CurrentVisitedInstructions =
+        new(() => new HashSet<Instruction>());
+
+    internal static readonly ThreadLocal<Stack<ICodeLine>> CurrentStack = new(() => new Stack<ICodeLine>());
 
     public static ICodeLine ParseInstruction(MethodDefinition method, Instruction instruction)
     {
@@ -88,7 +94,7 @@ public interface ICodeLine
         }
 
         if (instruction.OpCode == OpCodes.Br || instruction.OpCode == OpCodes.Br_S ||
-            instruction.OpCode.FlowControl == FlowControl.Cond_Branch) return new DupCodeLine(method, instruction);
+            instruction.OpCode.FlowControl == FlowControl.Cond_Branch) return null;
 
         if (instruction.OpCode.OpCodeType == OpCodeType.Prefix)
             return new NopCodeLine(method, instruction);

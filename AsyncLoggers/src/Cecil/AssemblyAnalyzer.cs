@@ -106,7 +106,7 @@ internal static class AssemblyAnalyzer
                 case XmlConfig.CallStatus.BepInEx:
                 {
                     var callReference = instruction.Operand as MethodReference;
-                    if (config.Cooldown.HasValue)
+                    if (!line.IsIncomplete && config.Cooldown.HasValue)
                     {
                         AsyncLoggers.VerboseLogWrappingLog(LogLevel.Warning, () =>
                             $"Throttling \"{logline}\" from {config.ClassName}:{config.MethodName}");

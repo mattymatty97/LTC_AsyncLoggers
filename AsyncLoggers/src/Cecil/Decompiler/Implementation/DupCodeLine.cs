@@ -7,7 +7,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class DupCodeLine : ICodeLine
 {
-    public DupCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal DupCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
         Method = method;

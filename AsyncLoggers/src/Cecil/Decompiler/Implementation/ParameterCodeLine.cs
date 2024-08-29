@@ -8,7 +8,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class ParameterCodeLine : ICodeLine
 {
-    public ParameterCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal ParameterCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
         Method = method;

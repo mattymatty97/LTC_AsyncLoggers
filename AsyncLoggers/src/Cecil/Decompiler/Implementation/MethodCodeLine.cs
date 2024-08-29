@@ -9,7 +9,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class MethodCodeLine : ICodeLine
 {
-    public MethodCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal MethodCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
 
@@ -181,7 +181,7 @@ public class MethodCodeLine : ICodeLine
         }
 
         if (EndInstruction.OpCode == OpCodes.Newobj)
-            return $"new {TargetMethod.DeclaringType.FullName}({{string.Join(\", \", Arguments)}})";
+            return $"new {TargetMethod.DeclaringType.Name}({{string.Join(\", \", Arguments)}})";
 
         if (TargetMethod.HasThis)
         {
@@ -189,7 +189,7 @@ public class MethodCodeLine : ICodeLine
             return $"{@this}.{TargetMethod.Name}({string.Join(", ", Arguments.Skip(1))})";
         }
 
-        return $"{TargetMethod.DeclaringType.FullName}.{TargetMethod.Name}({string.Join(", ", Arguments)})";
+        return $"{TargetMethod.DeclaringType.Name}.{TargetMethod.Name}({string.Join(", ", Arguments)})";
     }
 
     public override string ToString()

@@ -7,7 +7,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class NopCodeLine : ICodeLine
 {
-    public NopCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal NopCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
 

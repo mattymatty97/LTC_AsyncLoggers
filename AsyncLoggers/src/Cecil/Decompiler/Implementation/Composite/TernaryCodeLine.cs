@@ -9,7 +9,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation.Composite;
 
 public class TernaryCodeLine : ICompoundCodeLine
 {
-    public TernaryCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal TernaryCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
 

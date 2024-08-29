@@ -7,7 +7,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class ReferenceCodeLine : ICodeLine
 {
-    public ReferenceCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal ReferenceCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
         Method = method;

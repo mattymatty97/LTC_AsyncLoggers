@@ -20,19 +20,21 @@ Detect calls to `Unity.Debug` inside the game assemblies and allow users to twea
 Note: Has to be enabled in the config `LogWrapping.Enabled`
 
 # For the Developers:
-the main class `AsyncLoggers.AsyncLoggers` contains 4 methods to register your own `LogListener` into AsyncLoggers system:
-- SyncListener (listeners will receive logs directly)
+the class `AsyncLoggers.API.AsyncLoggersAPI` contains a method to register your own `ILogListener` into AsyncLoggers system:
 ```c#
-public static bool RegisterSyncListener(ILogListener listener)
-public static bool UnRegisterSyncListener(ILogListener listener)
+public static void UpdateListenerFlags(ILogListener target, LogListenerFlags flags)
 ```
-- UnfilteredListener (listeners will bypass the user defined filters and receive all logs)
-```c#
-public static bool RegisterUnfilteredListener(ILogListener listener)
-public static bool UnRegisterUnfilteredListener(ILogListener listener)
-```
-- TimestampedListener (listeners will have the TimeStamp prepended to the LogEventArgs Data)
-```c#
-public static bool RegisterTimestampedListener(ILogListener listener)
-public static bool UnRegisterTimestampedListener(ILogListener listener)
-```
+possible flags are:
+- `SyncHandling`  
+This listener will receive logs directly, without any buffering or delay.
+- `IgnoreFilters`  
+This listener will receive all logs, bypassing any filters that might be applied.
+- `AddTimeStamp`  
+This listener will have a timestamp prepended to the log messages.
+- `None`
+
+additionally the class exposes two properties:
+- `APIVersion`  
+The current version of the API, represented as a [Version](https://learn.microsoft.com/en-us/dotnet/api/system.version).
+- `TraceableLevelsMask`  
+a flag enum representing what [LogLevel](https://docs.bepinex.dev/api/BepInEx.Logging.LogLevel.html) will make AsyncLoggers block to collect stacktrace.

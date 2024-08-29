@@ -9,7 +9,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class ConstCodeLine : ICodeLine
 {
-    public ConstCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal ConstCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
         Method = method;

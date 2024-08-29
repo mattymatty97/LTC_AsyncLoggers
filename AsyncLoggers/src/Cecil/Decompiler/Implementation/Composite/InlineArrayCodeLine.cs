@@ -9,7 +9,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation.Composite;
 
 public class InlineArrayCodeLine : ICompoundCodeLine
 {
-    public InlineArrayCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal InlineArrayCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
 

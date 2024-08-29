@@ -25,7 +25,7 @@ public class ArithmeticCodeLine : ICodeLine
         Lt
     }
 
-    public ArithmeticCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal ArithmeticCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
         Method = method;

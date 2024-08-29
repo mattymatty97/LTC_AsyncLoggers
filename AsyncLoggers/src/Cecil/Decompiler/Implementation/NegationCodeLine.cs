@@ -8,7 +8,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class NegationCodeLine : ICodeLine
 {
-    public NegationCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal NegationCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
         Method = method;

@@ -2,6 +2,7 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Xml;
+using AsyncLoggers.API;
 using BepInEx;
 using BepInEx.Configuration;
 using BepInEx.Logging;
@@ -50,9 +51,14 @@ internal static class PluginConfig
             , "convert BepInEx console to async");
         BepInEx.Unity = _config.Bind("BepInEx", "Async Unity", true
             , "convert BepInEx->Unity Log to async");
+        BepInEx.Traces = _config.Bind("BepInEx", "Do not collect StackTraces", false
+            , "by default AsyncLoggers will block and collect StackTraces for Error and Fatal");
         //Debug
         Debug.LogWrappingVerbosity = _config.Bind("Debug", "LogWrapping Verbosity Level", LogLevel.None,
             "Print A LOT more logs about LogWrapping");
+
+        if (BepInEx.Traces.Value)
+            AsyncLoggersAPI.TraceableLevelsMask = LogLevel.None;
 
         CleanOrphanedEntries(_config);
     }
@@ -92,6 +98,7 @@ internal static class PluginConfig
         public static ConfigEntry<bool> Console;
         public static ConfigEntry<bool> Disk;
         public static ConfigEntry<bool> Unity;
+        public static ConfigEntry<bool> Traces;
     }
 
     public static class LogWrapping

@@ -8,7 +8,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class ArrCodeLine : ICodeLine
 {
-    public ArrCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal ArrCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
         Method = method;

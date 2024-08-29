@@ -7,7 +7,7 @@ namespace AsyncLoggers.Cecil.Decompiler.Implementation;
 
 public class ExceptionCodeLine : ICodeLine
 {
-    public ExceptionCodeLine(MethodDefinition method, Instruction instruction)
+    protected internal ExceptionCodeLine(MethodDefinition method, Instruction instruction)
     {
         ICodeLine.CurrentStack.Value.Push(this);
 
