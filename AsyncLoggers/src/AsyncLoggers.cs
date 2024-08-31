@@ -23,7 +23,7 @@ public static class AsyncLoggers
 {
     public const string GUID = "mattymatty.AsyncLoggers";
     public const string NAME = "AsyncLoggers";
-    public const string VERSION = "2.1.0";
+    public const string VERSION = "2.1.1";
 
     internal static readonly BepInPlugin Plugin = new BepInPlugin(GUID, NAME, VERSION);
     internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
@@ -31,7 +31,7 @@ public static class AsyncLoggers
 
     internal static Harmony _harmony;
         
-    private static int _startTime;
+    internal static int _startTime { get; private set; }
 
     public static IEnumerable<string> TargetDLLs => GetDLLs();
 
@@ -88,26 +88,26 @@ public static class AsyncLoggers
         {
             PluginConfig.TimestampType.DateTime => (le) =>
             {
-                var context = le as LogEventWrapper;
-                var timestamp = context?.Timestamp ?? DateTime.Now;
+                var context = le.AsLogEventWrapper();
+                var timestamp = context.Timestamp;
                 return timestamp.ToString("HH:mm:ss.fffffff");
             },
             PluginConfig.TimestampType.TickCount => (le) =>
             {
-                var context = le as LogEventWrapper;
-                var timestamp = $"{(context?.Tick ?? Environment.TickCount & int.MaxValue) - _startTime:0000000000000000}";
+                var context = le.AsLogEventWrapper();
+                var timestamp = $"{context.Tick:0000000000000000}";
                 return timestamp[^16..];
             },
             PluginConfig.TimestampType.FrameCount => (le) =>
             {
-                var context = le as LogEventWrapper;
-                var timestamp = $"{context?.Frame ?? (Time.frameCount & int.MaxValue):0000000000000000}";
+                var context = le.AsLogEventWrapper();
+                var timestamp = $"{context.Frame:0000000000000000}";
                 return timestamp[^16..];
             },
             PluginConfig.TimestampType.Counter => (le) =>
             {
-                var context = le as LogEventWrapper;
-                var timestamp = $"{context?.Uuid ?? -1:0000000000000000}";
+                var context = le.AsLogEventWrapper();
+                var timestamp = $"{context.Uuid:0000000000000000}";
                 return timestamp[^16..];
             },
             _ => throw new ArgumentOutOfRangeException(

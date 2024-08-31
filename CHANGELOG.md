@@ -1,3 +1,6 @@
+# v2.1.1
+- add UnityFrame as timestamp option
+
 # v2.1.0
 - New API for registering ILogListeners ( API version 1.0.0 )
 - improved detection of `Debug.Log` calls ( Config version v1.1 )

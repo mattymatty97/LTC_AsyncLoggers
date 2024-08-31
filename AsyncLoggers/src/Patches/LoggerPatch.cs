@@ -36,13 +36,13 @@ internal class LoggerPatch
         if (sender == AsyncLoggers.Log)
             return true;
         
-        string stacktrace = null;
+        var wrappedEvent = eventArgs.AsLogEventWrapper();
+
         if ((eventArgs.Level & AsyncLoggersAPI.TraceableLevelsMask) != 0 && sender is not ManualLogSource { SourceName: "Preloader" })
         {
-            stacktrace = Environment.StackTrace;
+            wrappedEvent.StackTrace = Environment.StackTrace;
         }
         
-        var wrappedEvent = eventArgs.AsLogEventWrapper();
         var timestampedEvent = PluginConfig.Timestamps.Enabled.Value ? wrappedEvent.AsTimestampedLogEventArg() : wrappedEvent;
 
         foreach (var listener in SyncListeners)

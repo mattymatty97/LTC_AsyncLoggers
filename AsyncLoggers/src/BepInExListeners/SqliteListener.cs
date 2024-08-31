@@ -23,15 +23,18 @@ namespace AsyncLoggers.BepInExListeners
 
         public void LogEvent(object sender, LogEventArgs eventArgs)
         {
-            var context = eventArgs as LogEventWrapper;
+            var context = eventArgs.AsLogEventWrapper();
             var log = new Tables.Logs
             {
                 execution_id = SqliteLogger.ExecutionId,
-                UUID = (int)(context?.Uuid ?? -1),
-                timestamp = context?.Timestamp.ToString("o", CultureInfo.InvariantCulture),
-                source = eventArgs.Source.SourceName,
-                level = eventArgs.Level.ToString(),
-                message = eventArgs.Data?.ToString()
+                UUID = (int)context.Uuid,
+                timestamp = context.Timestamp.ToString("o", CultureInfo.InvariantCulture),
+                tickCount = context.Tick,
+                frameCount = context.Frame,
+                source = context.Source.SourceName,
+                level = context.Level.ToString(),
+                message = context.Data?.ToString(),
+                stacktrace = context.StackTrace
             };
             try
             {
@@ -53,6 +56,10 @@ namespace AsyncLoggers.BepInExListeners
                 [Indexed] public int execution_id { get; set; }
                 [Indexed] public int UUID { get; set; }
                 [Indexed] public string timestamp { get; set; }
+                
+                [Indexed] public int tickCount { get; set; }
+                
+                [Indexed] public int frameCount { get; set; }
                 [Indexed] public string source { get; set; }
                 [Indexed] public string level { get; set; }
                 public string message { get; set; }

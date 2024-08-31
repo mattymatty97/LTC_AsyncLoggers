@@ -146,17 +146,6 @@ namespace AsyncLoggers.BepInExListeners
                 public string modVersion { get; set; }
             }
 
-            public class Events
-            {
-                [PrimaryKey, AutoIncrement] public int _id { get; set; }
-                public int execution_id { get; set; }
-                public int UUID { get; set; }
-                public string timestamp { get; set; }
-                public string source { get; set; }
-                public string tag { get; set; }
-                public string data { get; set; }
-            }
-
             public class ModData
             {
                 [PrimaryKey, AutoIncrement] public int _id { get; set; }
