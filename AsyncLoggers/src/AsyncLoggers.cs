@@ -14,6 +14,7 @@ using BepInEx.Logging;
 using HarmonyLib;
 using JetBrains.Annotations;
 using Mono.Cecil;
+using UnityEngine;
 using Logger = BepInEx.Logging.Logger;
 
 namespace AsyncLoggers;
@@ -91,16 +92,23 @@ public static class AsyncLoggers
                 var timestamp = context?.Timestamp ?? DateTime.Now;
                 return timestamp.ToString("HH:mm:ss.fffffff");
             },
-            PluginConfig.TimestampType.TickCount => (_) =>
+            PluginConfig.TimestampType.TickCount => (le) =>
             {
-                var timestamp = $"{(Environment.TickCount & Int32.MaxValue) - _startTime:0000000000000000}";
-                return timestamp.Substring(timestamp.Length - 16);
+                var context = le as LogEventWrapper;
+                var timestamp = $"{(context?.Tick ?? Environment.TickCount & int.MaxValue) - _startTime:0000000000000000}";
+                return timestamp[^16..];
+            },
+            PluginConfig.TimestampType.FrameCount => (le) =>
+            {
+                var context = le as LogEventWrapper;
+                var timestamp = $"{context?.Frame ?? (Time.frameCount & int.MaxValue):0000000000000000}";
+                return timestamp[^16..];
             },
             PluginConfig.TimestampType.Counter => (le) =>
             {
                 var context = le as LogEventWrapper;
                 var timestamp = $"{context?.Uuid ?? -1:0000000000000000}";
-                return timestamp.Substring(timestamp.Length - 16);
+                return timestamp[^16..];
             },
             _ => throw new ArgumentOutOfRangeException(
                 $"{PluginConfig.Timestamps.Type.Value} is not a valid TimestampType")

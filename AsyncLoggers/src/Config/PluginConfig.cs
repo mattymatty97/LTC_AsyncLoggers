@@ -122,6 +122,7 @@ internal static class PluginConfig
     {
         DateTime,
         TickCount,
+        FrameCount,
         Counter
     }
 }

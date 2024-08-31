@@ -2,7 +2,7 @@
 
 public class TimestampedLogEventArg : LogEventWrapper
 {
-    internal TimestampedLogEventArg(LogEventWrapper original) : base(original.Data, original.Level, original.Source, original.Timestamp, original.AppTimestamp, original.Uuid, original.StackTrace)
+    internal TimestampedLogEventArg(LogEventWrapper original) : base(original.Data, original.Level, original.Source, original.Frame, original.Tick, original.Timestamp, original.AppTimestamp, original.Uuid, original.StackTrace)
     {
     }
 
