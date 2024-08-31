@@ -23,14 +23,14 @@ public static class AsyncLoggers
 {
     public const string GUID = "mattymatty.AsyncLoggers";
     public const string NAME = "AsyncLoggers";
-    public const string VERSION = "2.1.1";
+    public const string VERSION = "2.1.2";
 
     internal static readonly BepInPlugin Plugin = new BepInPlugin(GUID, NAME, VERSION);
     internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
     internal static ManualLogSource WrappedUnitySource { get; } = Logger.CreateLogSource("Unity Log");
 
     internal static Harmony _harmony;
-        
+
     internal static int _startTime { get; private set; }
 
     public static IEnumerable<string> TargetDLLs => GetDLLs();
@@ -41,18 +41,21 @@ public static class AsyncLoggers
             yield break;
 
         var dlls = Utility.GetUniqueFilesInDirectories(BepInEx.Paths.DllSearchPaths, "*.dll");
-        
-        var assemblies = PluginConfig.LogWrapping.TargetGameAssemblies.Value.Split(",").Select(p => p.Trim()).ToList();;
+
+        var assemblies = PluginConfig.LogWrapping.TargetGameAssemblies.Value.Split(",").Select(p => p.Trim()).ToList();
+        ;
         var sortedList = AssemblyDependencySorter.SortAssembliesByDependency(assemblies.Select(name =>
         {
             return dlls.FirstOrDefault(path => path.EndsWith(name));
         }).Where(s => s != null)).ToList();
-        
+
         if (assemblies.Contains("***"))
-            sortedList = AssemblyDependencySorter.SortAssembliesByDependency(dlls.Where(an => !an.Contains("netstandard"))).ToList();
-        
-        VerboseLogWrappingLog(LogLevel.Warning, () => $"Assembly Load Order: {string.Join(",", sortedList.Select(Path.GetFileName))}");
-        
+            sortedList = AssemblyDependencySorter
+                .SortAssembliesByDependency(dlls.Where(an => !an.Contains("netstandard"))).ToList();
+
+        VerboseLogWrappingLog(LogLevel.Warning,
+            () => $"Assembly Load Order: {string.Join(",", sortedList.Select(Path.GetFileName))}");
+
         foreach (var assembly in sortedList)
         {
             yield return Path.GetFileName(assembly);
@@ -73,12 +76,33 @@ public static class AsyncLoggers
         }
     }
 
+    private static int _lastUnityFrame = 0;
+    private static bool _quitting = false;
+
+    public static int UnityFrameCount
+    {
+        get
+        {
+            int frame;
+            if (!_quitting){
+                frame = Time.frameCount;
+                _lastUnityFrame = frame;
+            }
+            else
+            {
+                frame = _lastUnityFrame;
+            }
+
+            return frame;
+        }
+    }
+
     // Cannot be renamed, method name is important
     public static void Initialize()
     {
         Log.LogInfo($"{NAME}:{VERSION} Prepatcher Started");
         PluginConfig.Init();
-        
+
         _startTime = Environment.TickCount & Int32.MaxValue;
         if (PluginConfig.Timestamps.Enabled.Value)
             Log.LogWarning(
@@ -113,35 +137,34 @@ public static class AsyncLoggers
             _ => throw new ArgumentOutOfRangeException(
                 $"{PluginConfig.Timestamps.Type.Value} is not a valid TimestampType")
         };
-            
+
         LoggerPatch.SyncListeners.Add(BepInEx.Preloader.Preloader.PreloaderLog);
         LoggerPatch.UnfilteredListeners.Add(BepInEx.Preloader.Preloader.PreloaderLog);
-            
+
         FilterConfig.LevelMasks[Logger.InternalLogSource] = LogLevel.All;
         FilterConfig.LevelMasks[Log] = LogLevel.All;
-            
+
         foreach (var source in Logger.Sources)
         {
-            if (source is not  HarmonyLogSource)
+            if (source is not HarmonyLogSource)
                 continue;
 
             FilterConfig.LevelMasks[source] = LogLevel.All;
             break;
         }
-        
     }
-        
+
     public static void Finish()
     {
         XmlConfig.WriteLogConfig();
-        
+
         SqliteLogger.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
-            
+
         _harmony = new Harmony(GUID);
         _harmony.PatchAll(typeof(PreloaderConsoleListenerPatch));
         _harmony.PatchAll(typeof(ChainloaderPatch));
         _harmony.PatchAll(typeof(LoggerPatch));
-        
+
         Log.LogInfo($"{NAME}:{VERSION} Prepatcher Finished");
     }
 
@@ -149,8 +172,9 @@ public static class AsyncLoggers
 
     internal static void OnApplicationQuit()
     {
+        _quitting = true;
         PluginConfig.CleanOrphanedEntries(PluginConfig.FilterConfig);
-            
+
         foreach (var threadWrapper in ThreadWrapper.Wrappers)
         {
             threadWrapper?.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
@@ -165,13 +189,13 @@ public static class AsyncLoggers
         if ((level & PluginConfig.Debug.LogWrappingVerbosity.Value) != 0)
             Log.Log(level, logline());
     }
-    
+
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static void VerboseLog(LogLevel level, [NotNull] Func<string> logline)
     {
         //TODO: Add config for this logtype
         //if (PluginConfig.Debug.VerboseCecil.Value)
-            Log.Log(level, logline());
+        Log.Log(level, logline());
     }
 
     [Obsolete("RegisterIgnoredILogListener is deprecated please use RegisterSyncListener instead")]

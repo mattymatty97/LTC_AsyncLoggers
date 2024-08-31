@@ -40,7 +40,7 @@ public class LogEventWrapper : Logging.LogEventArgs
 
     internal LogEventWrapper(LogEventArgs eventArgs) : base(eventArgs.Data, eventArgs.Level, eventArgs.Source)
     {
-        Frame = Time.frameCount & int.MaxValue;
+        Frame = AsyncLoggers.UnityFrameCount;
         Tick = (Environment.TickCount & int.MaxValue) - AsyncLoggers._startTime;
         Timestamp = DateTime.UtcNow;
         Uuid = Interlocked.Increment(ref _logCounter);

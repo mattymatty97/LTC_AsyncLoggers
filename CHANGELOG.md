@@ -1,3 +1,6 @@
+# v2.1.2
+- fix crash while quitting the game
+
 # v2.1.1
 - add UnityFrame as timestamp option
 

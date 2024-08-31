@@ -4,7 +4,7 @@
         <RootNamespace>AsyncLoggers</RootNamespace>
         <AssemblyName>AsyncLoggers</AssemblyName>
         <Product>Async Loggers</Product>
-        <Version>2.1.1</Version>
+        <Version>2.1.2</Version>
         <PackageLicenseExpression>LGPL-2.1+</PackageLicenseExpression>
         <TargetFramework>netstandard2.1</TargetFramework>
         <LangVersion>Latest</LangVersion>
