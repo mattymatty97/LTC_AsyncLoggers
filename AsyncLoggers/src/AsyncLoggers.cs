@@ -179,14 +179,19 @@ public static class AsyncLoggers
         {
             threadWrapper?.Stop(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
         }
-
-        SqliteLogger.Terminate(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
     }
 
     [MethodImpl(MethodImplOptions.NoInlining)]
     internal static void VerboseLogWrappingLog(LogLevel level, [NotNull] Func<string> logline)
     {
         if ((level & PluginConfig.Debug.LogWrappingVerbosity.Value) != 0)
+            Log.Log(level, logline());
+    }
+    
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    internal static void VerboseSqliteLog(LogLevel level, [NotNull] Func<string> logline)
+    {
+        if ((level & PluginConfig.Debug.SqliteVerbosity.Value) != 0)
             Log.Log(level, logline());
     }
 

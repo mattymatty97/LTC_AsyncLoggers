@@ -56,6 +56,8 @@ internal static class PluginConfig
         //Debug
         Debug.LogWrappingVerbosity = _config.Bind("Debug", "LogWrapping Verbosity Level", LogLevel.None,
             "Print A LOT more logs about LogWrapping");
+        Debug.SqliteVerbosity = _config.Bind("Debug", "Sqlite Verbosity Level", LogLevel.None,
+            "Print A LOT more logs about Sqlite DB");
 
         if (BepInEx.Traces.Value)
             AsyncLoggersAPI.TraceableLevelsMask = LogLevel.None;
@@ -110,6 +112,7 @@ internal static class PluginConfig
     public static class Debug
     {
         public static ConfigEntry<LogLevel> LogWrappingVerbosity;
+        public static ConfigEntry<LogLevel> SqliteVerbosity;
     }
 
     public enum ShutdownType

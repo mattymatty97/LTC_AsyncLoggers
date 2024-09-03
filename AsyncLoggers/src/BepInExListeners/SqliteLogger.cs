@@ -75,10 +75,11 @@ namespace AsyncLoggers.BepInExListeners
                         }
 
                         Connection = new SQLiteConnection(outputFile);
+						
+						Connection.ExecuteScalar<int>("PRAGMA journal_mode=WAL;");
 
                         Connection.CreateTable<Tables.Executions>(CreateFlags.AutoIncPK);
                         Connection.CreateTable<Tables.Mods>(CreateFlags.AutoIncPK);
-                        Connection.CreateTable<Tables.ModData>(CreateFlags.AutoIncPK);
 
                         ExecutionId = GetExecution();
 
@@ -144,16 +145,6 @@ namespace AsyncLoggers.BepInExListeners
                 public string modID { get; set; }
                 public string modName { get; set; }
                 public string modVersion { get; set; }
-            }
-
-            public class ModData
-            {
-                [PrimaryKey, AutoIncrement] public int _id { get; set; }
-                public int execution_id { get; set; }
-                public string timestamp { get; set; }
-                public string source { get; set; }
-                public string tag { get; set; }
-                public string data { get; set; }
             }
         }
         

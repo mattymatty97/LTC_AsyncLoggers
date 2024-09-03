@@ -21,6 +21,13 @@ namespace AsyncLoggers.BepInExListeners
         {
         }
 
+        public void FlushWAL()
+        {
+            AsyncLoggers.VerboseSqliteLog(LogLevel.Warning, ()=> "Flushing WAL!");
+
+            SqliteLogger.Connection.ExecuteScalar<int>("PRAGMA wal_checkpoint(TRUNCATE);");
+        }
+
         public void LogEvent(object sender, LogEventArgs eventArgs)
         {
             var context = eventArgs.AsLogEventWrapper();

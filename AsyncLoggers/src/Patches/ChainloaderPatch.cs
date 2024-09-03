@@ -2,6 +2,7 @@
 using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.Config;
 using AsyncLoggers.Proxy;
+using AsyncLoggers.Wrappers;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using HarmonyLib;
@@ -26,6 +27,11 @@ internal class ChainloaderPatch
             {
                 AsyncLoggers.Log.LogWarning($"Adding Sqlite to BepInEx Listeners");
                 var sqliteListener = new SqliteListener();
+                var wrapper = LoggerPatch.WrappersMap.GetOrAdd(sqliteListener, l => new ThreadWrapper($"{l.GetType().Name} Wrapper"));
+                wrapper.OnBecomeIdle += sqliteListener.FlushWAL;
+                wrapper.Stopping += sqliteListener.FlushWAL;
+                wrapper.Stopping += () => SqliteLogger.Terminate(PluginConfig.Scheduler.ShutdownType.Value == PluginConfig.ShutdownType.Instant);
+                
                 Logger.Listeners.Add(sqliteListener);
                 LoggerPatch.UnfilteredListeners.Add(sqliteListener);
             }

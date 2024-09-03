@@ -24,7 +24,7 @@ internal class LoggerPatch
     internal static readonly HashSet<ILogListener> TimestampedListeners = [];
 
 
-    private static readonly ConcurrentDictionary<ILogListener, IWrapper> WrappersMap = [];
+    internal static readonly ConcurrentDictionary<ILogListener, IWrapper> WrappersMap = [];
 
     [HarmonyPrefix]
     [HarmonyPatch(typeof(Logger), nameof(Logger.InternalLogEvent))]

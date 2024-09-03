@@ -17,6 +17,9 @@ namespace AsyncLoggers.Wrappers
         private static readonly RunCondition DefaultCondition = ()=>true;
         private volatile RunCondition _shouldRun = DefaultCondition;
 
+        public event Action OnBecomeIdle;
+        public event Action Stopping;
+
         internal ThreadWrapper(string threadName = nameof(ThreadWrapper))
         {
             _taskRingBuffer = new ConcurrentCircularBuffer<Tuple<IWrapper.LogCallback,object, BepInEx.Logging.LogEventArgs>>(PluginConfig.Scheduler.ThreadBufferSize?.Value ?? 500);
@@ -37,6 +40,9 @@ namespace AsyncLoggers.Wrappers
                 {
                     try
                     {
+                        if (_semaphore.CurrentCount == 0)
+                            OnBecomeIdle?.Invoke();
+                        
                         if (!_semaphore.Wait(1000))
                             continue;
                         
@@ -62,14 +68,18 @@ namespace AsyncLoggers.Wrappers
                         }
                     }
                 }
+
+                Stopping?.Invoke();
             }
             catch (Exception ex)
             {
                 if (ex is ThreadInterruptedException || ex is ThreadAbortException)
                 {
                     _shouldRun = () => false;
+                    Stopping?.Invoke();
                     return;
                 }
+                
                 try
                 {
                     AsyncLoggers.Log.LogError($"Bad Exception while logging: {ex}");}
