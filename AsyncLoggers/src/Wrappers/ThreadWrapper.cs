@@ -20,6 +20,8 @@ namespace AsyncLoggers.Wrappers
         public event Action OnBecomeIdle;
         public event Action Stopping;
 
+        private static bool _isIdle;
+
         internal ThreadWrapper(string threadName = nameof(ThreadWrapper))
         {
             _taskRingBuffer = new ConcurrentCircularBuffer<Tuple<IWrapper.LogCallback,object, BepInEx.Logging.LogEventArgs>>(PluginConfig.Scheduler.ThreadBufferSize?.Value ?? 500);
@@ -40,11 +42,15 @@ namespace AsyncLoggers.Wrappers
                 {
                     try
                     {
-                        if (_semaphore.CurrentCount == 0)
-                            OnBecomeIdle?.Invoke();
                         
                         if (!_semaphore.Wait(1000))
+                        {
+                            if (!_isIdle)
+                                OnBecomeIdle?.Invoke();
+                            _isIdle = true;
                             continue;
+                        }
+                        _isIdle = false;
                         
                         if (_taskRingBuffer.TryDequeue(out var task))
                         {
