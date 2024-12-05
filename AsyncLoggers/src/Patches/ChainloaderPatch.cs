@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.Config;
 using AsyncLoggers.Proxy;
@@ -6,6 +7,7 @@ using AsyncLoggers.Wrappers;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using HarmonyLib;
+using UnityEngine.LowLevel;
 using Logger = BepInEx.Logging.Logger;
 
 namespace AsyncLoggers.Patches;
@@ -17,6 +19,8 @@ internal class ChainloaderPatch
     [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Initialize))]
     private static void OnInitialize()
     {
+        AsyncLoggers.MainThread = Thread.CurrentThread;
+
         LoggerPatch.SyncListeners.Remove(BepInEx.Preloader.Preloader.PreloaderLog);
                 
         ProxyClass.AppendQuittingCallback();

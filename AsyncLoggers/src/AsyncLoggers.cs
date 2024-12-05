@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using AsyncLoggers.BepInExListeners;
 using AsyncLoggers.Cecil;
 using AsyncLoggers.Config;
@@ -25,13 +26,15 @@ public static class AsyncLoggers
     public const string NAME = "AsyncLoggers";
     public const string VERSION = "2.1.2";
 
+    internal static Thread MainThread;
+
     internal static readonly BepInPlugin Plugin = new BepInPlugin(GUID, NAME, VERSION);
     internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
     internal static ManualLogSource WrappedUnitySource { get; } = Logger.CreateLogSource("Unity Log");
 
-    internal static Harmony _harmony;
+    internal static Harmony Harmony;
 
-    internal static int _startTime { get; private set; }
+    internal static int StartTime { get; private set; }
 
     public static IEnumerable<string> TargetDLLs => GetDLLs();
 
@@ -43,7 +46,7 @@ public static class AsyncLoggers
         var dlls = Utility.GetUniqueFilesInDirectories(BepInEx.Paths.DllSearchPaths, "*.dll");
 
         var assemblies = PluginConfig.LogWrapping.TargetGameAssemblies.Value.Split(",").Select(p => p.Trim()).ToList();
-        ;
+        
         var sortedList = AssemblyDependencySorter.SortAssembliesByDependency(assemblies.Select(name =>
         {
             return dlls.FirstOrDefault(path => path.EndsWith(name));
@@ -84,6 +87,10 @@ public static class AsyncLoggers
         get
         {
             int frame;
+            if (Thread.CurrentThread.ManagedThreadId != MainThread?.ManagedThreadId)
+            {
+                return -1;
+            }
             if (!_quitting){
                 frame = Time.frameCount;
                 _lastUnityFrame = frame;
@@ -103,7 +110,7 @@ public static class AsyncLoggers
         Log.LogInfo($"{NAME}:{VERSION} Prepatcher Started");
         PluginConfig.Init();
 
-        _startTime = Environment.TickCount & Int32.MaxValue;
+        StartTime = Environment.TickCount & Int32.MaxValue;
         if (PluginConfig.Timestamps.Enabled.Value)
             Log.LogWarning(
                 $"{NAME}:{VERSION} Timestamps start at {DateTime.UtcNow:dddd, dd MMMM yyyy HH:mm:ss.fffffff} UTC");
@@ -160,10 +167,10 @@ public static class AsyncLoggers
 
         SqliteLogger.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
 
-        _harmony = new Harmony(GUID);
-        _harmony.PatchAll(typeof(PreloaderConsoleListenerPatch));
-        _harmony.PatchAll(typeof(ChainloaderPatch));
-        _harmony.PatchAll(typeof(LoggerPatch));
+        Harmony = new Harmony(GUID);
+        Harmony.PatchAll(typeof(PreloaderConsoleListenerPatch));
+        Harmony.PatchAll(typeof(ChainloaderPatch));
+        Harmony.PatchAll(typeof(LoggerPatch));
 
         Log.LogInfo($"{NAME}:{VERSION} Prepatcher Finished");
     }
