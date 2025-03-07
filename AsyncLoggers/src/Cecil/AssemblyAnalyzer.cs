@@ -115,6 +115,7 @@ internal static class AssemblyAnalyzer
                         ReplaceCallWithThrothledBepIn(method, throttledRedirects, instructions, ref index,
                             ref startIndex,
                             callReference, logKey);
+
                     }
                     else
                     {

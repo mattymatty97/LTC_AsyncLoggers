@@ -12,6 +12,9 @@ Async Loggers
 remove any log related lag by processing them separately from the game stuff.
 the more logs your modpack generates the bigger the impact this mod has!
 
+### Database log file:
+adds another log file in sqlite format for easier navigation of logs
+
 ### Log Level filter:
 Reduce logs from mods by specifying a LogLevel for each LogSource
 

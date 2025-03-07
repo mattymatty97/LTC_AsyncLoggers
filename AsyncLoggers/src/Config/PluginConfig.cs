@@ -51,16 +51,15 @@ internal static class PluginConfig
             , "convert BepInEx console to async");
         BepInEx.Unity = _config.Bind("BepInEx", "Async Unity", true
             , "convert BepInEx->Unity Log to async");
-        BepInEx.Traces = _config.Bind("BepInEx", "Do not collect StackTraces", false
-            , "by default AsyncLoggers will block and collect StackTraces for Error and Fatal");
+        BepInEx.Traces = _config.Bind("BepInEx", "Collect StackTraces for", LogLevel.None
+            , "if AsyncLoggers should block and collect StackTraces for the specified LogLevels");
         //Debug
         Debug.LogWrappingVerbosity = _config.Bind("Debug", "LogWrapping Verbosity Level", LogLevel.None,
             "Print A LOT more logs about LogWrapping");
         Debug.SqliteVerbosity = _config.Bind("Debug", "Sqlite Verbosity Level", LogLevel.None,
             "Print A LOT more logs about Sqlite DB");
 
-        if (BepInEx.Traces.Value)
-            AsyncLoggersAPI.TraceableLevelsMask = LogLevel.None;
+        AsyncLoggersAPI.TraceableLevelsMask = BepInEx.Traces.Value;
 
         CleanOrphanedEntries(_config);
     }
@@ -100,7 +99,7 @@ internal static class PluginConfig
         public static ConfigEntry<bool> Console;
         public static ConfigEntry<bool> Disk;
         public static ConfigEntry<bool> Unity;
-        public static ConfigEntry<bool> Traces;
+        public static ConfigEntry<LogLevel> Traces;
     }
 
     public static class LogWrapping

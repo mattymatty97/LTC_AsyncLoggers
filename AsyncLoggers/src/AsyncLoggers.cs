@@ -24,7 +24,7 @@ public static class AsyncLoggers
 {
     public const string GUID = "mattymatty.AsyncLoggers";
     public const string NAME = "AsyncLoggers";
-    public const string VERSION = "2.1.2";
+    public const string VERSION = "2.1.3";
 
     internal static Thread MainThread;
 
@@ -69,13 +69,13 @@ public static class AsyncLoggers
     {
         try
         {
-            AsyncLoggers.Log.LogWarning($"Parsing {assembly.Name.Name} for Unity.Debug calls!");
+            Log.LogWarning($"Parsing {assembly.Name.Name} for Unity.Debug calls!");
             AssemblyAnalyzer.ProcessAssembly(assembly, out var count);
-            AsyncLoggers.Log.LogInfo($"Found {count} Unity.Debug calls in {assembly.Name.Name}");
+            Log.LogInfo($"Found {count} Unity.Debug calls in {assembly.Name.Name}");
         }
         catch (Exception ex)
         {
-            AsyncLoggers.Log.LogFatal(ex);
+            Log.LogFatal(ex);
         }
     }
 
@@ -188,21 +188,21 @@ public static class AsyncLoggers
         }
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VerboseLogWrappingLog(LogLevel level, [NotNull] Func<string> logline)
     {
         if ((level & PluginConfig.Debug.LogWrappingVerbosity.Value) != 0)
             Log.Log(level, logline());
     }
     
-    [MethodImpl(MethodImplOptions.NoInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VerboseSqliteLog(LogLevel level, [NotNull] Func<string> logline)
     {
         if ((level & PluginConfig.Debug.SqliteVerbosity.Value) != 0)
             Log.Log(level, logline());
     }
 
-    [MethodImpl(MethodImplOptions.NoInlining)]
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     internal static void VerboseLog(LogLevel level, [NotNull] Func<string> logline)
     {
         //TODO: Add config for this logtype

@@ -1,3 +1,10 @@
+# v2.1.4
+- add R.E.P.O community
+- make StackTrace collection Opt-in instead of Opt-out
+
+# v2.1.3
+- do not query frameCount from outside the main thread
+
 # v2.1.2
 - fix crash while quitting the game
 

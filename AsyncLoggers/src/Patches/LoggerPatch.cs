@@ -35,7 +35,7 @@ internal class LoggerPatch
         
         if (sender == AsyncLoggers.Log)
             return true;
-        
+
         var wrappedEvent = eventArgs.AsLogEventWrapper();
 
         if ((eventArgs.Level & AsyncLoggersAPI.TraceableLevelsMask) != 0 && sender is not ManualLogSource { SourceName: "Preloader" })
