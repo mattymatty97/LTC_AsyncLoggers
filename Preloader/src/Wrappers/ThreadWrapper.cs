@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using AsyncLoggers.Buffer;
 using AsyncLoggers.Config;
+using AsyncLoggers.Wrappers.EventArgs;
 
 namespace AsyncLoggers.Wrappers
 {
@@ -13,7 +14,7 @@ namespace AsyncLoggers.Wrappers
 
         private readonly Thread _loggingThread;
         private readonly SemaphoreSlim _semaphore;
-        private readonly ConcurrentCircularBuffer<Tuple<IWrapper.LogCallback,object, BepInEx.Logging.LogEventArgs>> _taskRingBuffer;
+        private readonly ConcurrentCircularBuffer<Tuple<IWrapper.LogCallback,object, ExtendedLogEventArgs>> _taskRingBuffer;
         private static readonly RunCondition DefaultCondition = ()=>true;
         private volatile RunCondition _shouldRun = DefaultCondition;
 
@@ -24,7 +25,7 @@ namespace AsyncLoggers.Wrappers
 
         internal ThreadWrapper(string threadName = nameof(ThreadWrapper))
         {
-            _taskRingBuffer = new ConcurrentCircularBuffer<Tuple<IWrapper.LogCallback,object, BepInEx.Logging.LogEventArgs>>(PluginConfig.Scheduler.ThreadBufferSize?.Value ?? 500);
+            _taskRingBuffer = new ConcurrentCircularBuffer<Tuple<IWrapper.LogCallback,object, ExtendedLogEventArgs>>(PluginConfig.Scheduler.ThreadBufferSize?.Value ?? 500);
             _semaphore = new SemaphoreSlim(0);
             _loggingThread = new Thread(LogWorker)
             {
@@ -66,7 +67,7 @@ namespace AsyncLoggers.Wrappers
                         }
                         try
                         {
-                            AsyncLoggers.Log.LogError($"Exception while logging: {ex}");
+                            AsyncLoggers.EmergencyLog.LogError($"Exception while logging: {ex}");
                         }
                         catch (Exception)
                         {
@@ -88,7 +89,7 @@ namespace AsyncLoggers.Wrappers
                 
                 try
                 {
-                    AsyncLoggers.Log.LogError($"Bad Exception while logging: {ex}");}
+                    AsyncLoggers.EmergencyLog.LogError($"Bad Exception while logging: {ex}");}
                 catch (Exception)
                 {
                     Console.WriteLine($"Bad Exception while logging: {ex}");
@@ -96,12 +97,12 @@ namespace AsyncLoggers.Wrappers
             }
         }
         
-        public void Schedule(IWrapper.LogCallback callback, object sender, BepInEx.Logging.LogEventArgs eventArgs)
+        public void Schedule(IWrapper.LogCallback callback, object sender, ExtendedLogEventArgs eventArgs)
         {
             if (_shouldRun != DefaultCondition) 
                 return;
 
-            _taskRingBuffer.Enqueue(new (callback, sender, eventArgs));
+            _taskRingBuffer.Enqueue(new Tuple<IWrapper.LogCallback, object, ExtendedLogEventArgs>(callback, sender, eventArgs));
             _semaphore.Release();
         }
 

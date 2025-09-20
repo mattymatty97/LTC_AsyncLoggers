@@ -11,30 +11,34 @@ using AsyncLoggers.Patches;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.EventArgs;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using HarmonyLib;
 using JetBrains.Annotations;
 using Mono.Cecil;
+using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Logger = BepInEx.Logging.Logger;
+// ReSharper disable CollectionNeverQueried.Global
 
 namespace AsyncLoggers;
 
 public static class AsyncLoggers
 {
-    public const string GUID = "mattymatty.AsyncLoggers";
-    public const string NAME = "AsyncLoggers";
-    public const string VERSION = "2.1.3";
+    public const string GUID = MyPluginInfo.PLUGIN_GUID;
+    public const string NAME = MyPluginInfo.PLUGIN_NAME;
+    public const string VERSION = MyPluginInfo.PLUGIN_VERSION;
 
-    internal static Thread MainThread;
+    internal static int MainThreadID;
 
     internal static readonly BepInPlugin Plugin = new BepInPlugin(GUID, NAME, VERSION);
     internal static ManualLogSource Log { get; } = Logger.CreateLogSource(nameof(AsyncLoggers));
+    internal static ManualLogSource EmergencyLog { get; } = Logger.CreateLogSource($"E-{nameof(AsyncLoggers)}");
     internal static ManualLogSource WrappedUnitySource { get; } = Logger.CreateLogSource("Unity Log");
 
-    internal static Harmony Harmony;
+    internal static Harmony Harmony = new Harmony(GUID);
 
-    internal static int StartTime { get; private set; }
+    internal static readonly List<Hook> Hooks = [];
 
     public static IEnumerable<string> TargetDLLs => GetDLLs();
 
@@ -79,74 +83,14 @@ public static class AsyncLoggers
         }
     }
 
-    private static int _lastUnityFrame = 0;
-    private static bool _quitting = false;
-
-    public static int UnityFrameCount
-    {
-        get
-        {
-            int frame;
-            if (Thread.CurrentThread.ManagedThreadId != MainThread?.ManagedThreadId)
-            {
-                return -1;
-            }
-            if (!_quitting){
-                frame = Time.frameCount;
-                _lastUnityFrame = frame;
-            }
-            else
-            {
-                frame = _lastUnityFrame;
-            }
-
-            return frame;
-        }
-    }
-
     // Cannot be renamed, method name is important
     public static void Initialize()
     {
         Log.LogInfo($"{NAME}:{VERSION} Prepatcher Started");
+
+        MainThreadID = Thread.CurrentThread.ManagedThreadId;
+
         PluginConfig.Init();
-
-        StartTime = Environment.TickCount & Int32.MaxValue;
-        if (PluginConfig.Timestamps.Enabled.Value)
-            Log.LogWarning(
-                $"{NAME}:{VERSION} Timestamps start at {DateTime.UtcNow:dddd, dd MMMM yyyy HH:mm:ss.fffffff} UTC");
-
-        GetLogTimestamp = PluginConfig.Timestamps.Type.Value switch
-        {
-            PluginConfig.TimestampType.DateTime => (le) =>
-            {
-                var context = le.AsLogEventWrapper();
-                var timestamp = context.Timestamp;
-                return timestamp.ToString("HH:mm:ss.fffffff");
-            },
-            PluginConfig.TimestampType.TickCount => (le) =>
-            {
-                var context = le.AsLogEventWrapper();
-                var timestamp = $"{context.Tick:0000000000000000}";
-                return timestamp[^16..];
-            },
-            PluginConfig.TimestampType.FrameCount => (le) =>
-            {
-                var context = le.AsLogEventWrapper();
-                var timestamp = $"{context.Frame:0000000000000000}";
-                return timestamp[^16..];
-            },
-            PluginConfig.TimestampType.Counter => (le) =>
-            {
-                var context = le.AsLogEventWrapper();
-                var timestamp = $"{context.Uuid:0000000000000000}";
-                return timestamp[^16..];
-            },
-            _ => throw new ArgumentOutOfRangeException(
-                $"{PluginConfig.Timestamps.Type.Value} is not a valid TimestampType")
-        };
-
-        LoggerPatch.SyncListeners.Add(BepInEx.Preloader.Preloader.PreloaderLog);
-        LoggerPatch.UnfilteredListeners.Add(BepInEx.Preloader.Preloader.PreloaderLog);
 
         FilterConfig.LevelMasks[Logger.InternalLogSource] = LogLevel.All;
         FilterConfig.LevelMasks[Log] = LogLevel.All;
@@ -159,6 +103,7 @@ public static class AsyncLoggers
             FilterConfig.LevelMasks[source] = LogLevel.All;
             break;
         }
+
     }
 
     public static void Finish()
@@ -167,20 +112,17 @@ public static class AsyncLoggers
 
         SqliteLogger.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
 
-        Harmony = new Harmony(GUID);
-        Harmony.PatchAll(typeof(PreloaderConsoleListenerPatch));
         Harmony.PatchAll(typeof(ChainloaderPatch));
-        Harmony.PatchAll(typeof(LoggerPatch));
 
         Log.LogInfo($"{NAME}:{VERSION} Prepatcher Finished");
     }
 
-    internal static Func<LogEventArgs, object> GetLogTimestamp;
+    internal static bool _quitting;
 
     internal static void OnApplicationQuit()
     {
         _quitting = true;
-        PluginConfig.CleanOrphanedEntries(PluginConfig.FilterConfig);
+        //PluginConfig.CleanOrphanedEntries(PluginConfig.FilterConfig);
 
         foreach (var threadWrapper in ThreadWrapper.Wrappers)
         {
@@ -189,21 +131,21 @@ public static class AsyncLoggers
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VerboseLogWrappingLog(LogLevel level, [NotNull] Func<string> logline)
+    internal static void VerboseLogWrappingLog(LogLevel level, Func<string> logline)
     {
         if ((level & PluginConfig.Debug.LogWrappingVerbosity.Value) != 0)
             Log.Log(level, logline());
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VerboseSqliteLog(LogLevel level, [NotNull] Func<string> logline)
+    internal static void VerboseSqliteLog(LogLevel level, Func<string> logline)
     {
         if ((level & PluginConfig.Debug.SqliteVerbosity.Value) != 0)
             Log.Log(level, logline());
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static void VerboseLog(LogLevel level, [NotNull] Func<string> logline)
+    internal static void VerboseLog(LogLevel level, Func<string> logline)
     {
         //TODO: Add config for this logtype
         //if (PluginConfig.Debug.VerboseCecil.Value)
