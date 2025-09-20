@@ -1,3 +1,8 @@
+# v2.2.0
+- rewrite internals for hopefully better performance, reliability and readability
+- make BepInEx intercept UnityLogs from other threads (mainly from jobs)
+- do not prune orphan entries in FilterConfig
+
 # v2.1.4
 - add R.E.P.O community
 - make StackTrace collection Opt-in instead of Opt-out

@@ -25,8 +25,6 @@ internal class LoggerPatch
 
     private static void NewLogEventProcessor(object sender, LogEventArgs eventArgs)
     {
-        
-        Console.Out.WriteLine($"Log event {eventArgs.Data}");
         if (sender == AsyncLoggers.EmergencyLog)
         {
             Logger.InternalLogEvent(sender, eventArgs);

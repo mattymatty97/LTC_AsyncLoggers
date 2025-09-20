@@ -74,14 +74,28 @@ public class ExtendedLogEventArgs : LogEventArgs
         {
             PluginConfig.TimestampType.DateTime => Timestamp.ToString("HH:mm:ss.fffffff"),
             PluginConfig.TimestampType.TickCount => Tick.ToString("D16"),
-            PluginConfig.TimestampType.FrameCount => (Frame?.ToString("D16") ?? "        N/A        "),
+            PluginConfig.TimestampType.FrameCount => (Frame?.ToString("D16") ?? FitString(ThreadName ?? "T"  + ThreadID.ToString("D5"),16)),
             PluginConfig.TimestampType.Counter => Uuid.ToString("D16"),
             _ => throw new ArgumentOutOfRangeException(
                 $"{PluginConfig.Timestamps.Type.Value} is not a valid TimestampType")
         };
 
-        var threadName = ThreadName ?? ThreadID.ToString("D5");
+        return new TimestampedLogEventArg(this, $"[{timestamp}] ");
 
-        return new TimestampedLogEventArg(this, $"[{timestamp}][{threadName}] ");
+        string FitString(string input, int length)
+        {
+            if (string.IsNullOrEmpty(input))
+                input = "";
+
+            // Truncate if too long
+            if (input.Length > length)
+                return input.Substring(0, length);
+
+            // If shorter, pad and center
+            int totalPadding = length - input.Length;
+            int padLeft = totalPadding / 2 + input.Length;
+            return input.PadLeft(padLeft).PadRight(length);
+        }
+
     }
 }
