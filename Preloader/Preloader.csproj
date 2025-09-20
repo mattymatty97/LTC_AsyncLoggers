@@ -28,8 +28,10 @@
         </PropertyGroup>
 
         <PropertyGroup>
-            <PluginOutDir>$(SolutionDir)\Plugin\$(OutDir)</PluginOutDir>
+            <PluginOutDir>$(SolutionDir)\Preloader\$(OutDir)</PluginOutDir>
+            <SqliteFile>$(SolutionDir)\Dependency\sqlite3.dll</SqliteFile>
             <PluginsDistributionDir>$(DistributionDir)\BepInEx\patchers</PluginsDistributionDir>
+            <SqliteDistributionDir>$(DistributionDir)\BepInEx\patchers\sqlite_native</SqliteDistributionDir>
         </PropertyGroup>
 
         <Message Importance="High" Text="Copyng Plugin to DistributionDir" />
@@ -41,6 +43,11 @@
         <Copy
                 SourceFiles="@(PluginOutputFiles)"
                 DestinationFolder="$(PluginsDistributionDir)"
+        />
+        <MakeDir Directories="$(SqliteDistributionDir)"/>
+        <Copy
+                SourceFiles="$(SqliteFile)"
+                DestinationFolder="$(SqliteDistributionDir)"
         />
     </Target>
 </Project>
