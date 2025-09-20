@@ -9,15 +9,11 @@ using AsyncLoggers.Cecil;
 using AsyncLoggers.Config;
 using AsyncLoggers.Patches;
 using AsyncLoggers.Wrappers;
-using AsyncLoggers.Wrappers.EventArgs;
 using BepInEx;
-using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using HarmonyLib;
-using JetBrains.Annotations;
 using Mono.Cecil;
 using MonoMod.RuntimeDetour;
-using UnityEngine;
 using Logger = BepInEx.Logging.Logger;
 // ReSharper disable CollectionNeverQueried.Global
 
@@ -112,7 +108,7 @@ public static class AsyncLoggers
 
         SqliteLogger.Init(Path.Combine(Paths.BepInExRootPath, "LogOutput.sqlite"));
 
-        Harmony.PatchAll(typeof(ChainloaderPatch));
+        ChainloaderPatch.InitMonoMod();
 
         Log.LogInfo($"{NAME}:{VERSION} Prepatcher Finished");
     }

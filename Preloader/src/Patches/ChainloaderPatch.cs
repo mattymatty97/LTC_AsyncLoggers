@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using System.Threading;
 using AsyncLoggers.BepInExListeners;
@@ -8,21 +10,63 @@ using AsyncLoggers.Wrappers;
 using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using HarmonyLib;
+using MonoMod.RuntimeDetour;
 using UnityEngine;
 using Logger = BepInEx.Logging.Logger;
 
 namespace AsyncLoggers.Patches;
 
-[HarmonyPatch]
 internal class ChainloaderPatch
 {
+    //REMINDER!!: do not patch Chainloader.Start!!!!
+    
+    private static Hook _chainloaderLoadedHook;
 
+    internal static void InitMonoMod()
+    {
+        var methodInfo =
+            AccessTools.Method(typeof(Chainloader), nameof(Chainloader.Initialize));
+        
+        AsyncLoggers.Hooks.Add(new Hook(methodInfo, DetourInitialize));
+        
+        methodInfo =
+            AccessTools.Method(typeof(Logger), nameof(Logger.LogMessage));
 
-    [HarmonyPrefix]
-    [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Initialize))]
+        _chainloaderLoadedHook = new Hook(methodInfo, DetourLogMessage);
+        AsyncLoggers.Hooks.Add(_chainloaderLoadedHook);
+    }
+
+    private static void DetourInitialize(Action<string, bool, ICollection<LogEventArgs>> orig, 
+        string gameExePath,
+        bool startConsole,
+        ICollection<LogEventArgs> preloaderLogEvents)
+    {
+        InitializePrefix();
+        orig(gameExePath, startConsole, preloaderLogEvents);
+        InitializePostfix();
+    }
+    
+    private static void DetourLogMessage(Action<object> orig, object data)
+    {
+        orig(data);
+
+        if (data is string message && message.Equals("Chainloader startup complete"))
+        {
+            _chainloaderLoadedHook?.Dispose();
+            AsyncLoggers.Hooks.Remove(_chainloaderLoadedHook);
+            try
+            {
+                SqliteLogger.WriteMods(Chainloader.PluginInfos.Values);
+            }
+            catch (Exception ex)
+            {
+                AsyncLoggers.EmergencyLog.LogError($"Exception logging mods {ex}");
+            }
+        }
+    }
+    
     private static void InitializePrefix()
     {
-        AsyncLoggers.EmergencyLog.LogWarning("a");
         try
         {
             var sourcesField =
@@ -31,13 +75,13 @@ internal class ChainloaderPatch
             var oldSourcesList = Logger.Sources;
             var newSourcesList = new LoggerPatch.AsyncLogSourceCollection(oldSourcesList);
             sourcesField!.SetValue(null, newSourcesList);
+            oldSourcesList.Clear();
         }
         catch (Exception ex)
         {
             AsyncLoggers.EmergencyLog.LogError($"Exception replacing sources list {ex}");
         }
 
-        AsyncLoggers.EmergencyLog.LogWarning("b");
         try
         {
             if (SqliteLogger.Enabled)
@@ -60,13 +104,11 @@ internal class ChainloaderPatch
         {
             AsyncLoggers.EmergencyLog.LogError($"Exception adding sqlite listener {ex}");
         }
+        
     }
 
-    [HarmonyPostfix]
-    [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Initialize))]
     private static void InitializePostfix()
     {
-        AsyncLoggers.EmergencyLog.LogWarning("c");
 
         foreach (var listener in Logger.Listeners)
         {
@@ -89,18 +131,11 @@ internal class ChainloaderPatch
                     break;
             }
         }
-
-        AsyncLoggers.EmergencyLog.LogWarning("d");
-    }
-
-    [HarmonyPrefix]
-    [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Start))]
-    private static void StartPrefix()
-    {
+        
+        ProxyClass.AppendQuittingCallback();
+        
         try
         {
-            ProxyClass.AppendQuittingCallback();
-
             var threadedEvent = typeof(Application).GetEvent("logMessageReceivedThreaded", BindingFlags.Static | BindingFlags.Public);
             if (threadedEvent != null)
             {
@@ -112,23 +147,6 @@ internal class ChainloaderPatch
         catch (Exception ex)
         {
             AsyncLoggers.EmergencyLog.LogError($"Exception in Chainloader.Start prefix {ex}");
-        }
-    }
-
-    [HarmonyPostfix]
-    [HarmonyPatch(typeof(Chainloader), nameof(Chainloader.Start))]
-    private static void StartPostfix()
-    {
-        if (!Chainloader._loaded)
-            return;
-
-        try
-        {
-            SqliteLogger.WriteMods(Chainloader.PluginInfos.Values);
-        }
-        catch (Exception ex)
-        {
-            AsyncLoggers.EmergencyLog.LogError($"Exception logging mods {ex}");
         }
     }
 

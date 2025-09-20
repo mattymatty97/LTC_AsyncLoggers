@@ -25,7 +25,8 @@ internal class LoggerPatch
 
     private static void NewLogEventProcessor(object sender, LogEventArgs eventArgs)
     {
-
+        
+        Console.Out.WriteLine($"Log event {eventArgs.Data}");
         if (sender == AsyncLoggers.EmergencyLog)
         {
             Logger.InternalLogEvent(sender, eventArgs);
@@ -100,7 +101,7 @@ internal class LoggerPatch
         }
     }
 
-    internal class AsyncLogSourceCollection([NotNull] IEnumerable<ILogSource> collection) :
+    internal class AsyncLogSourceCollection(IEnumerable<ILogSource> collection) :
         List<ILogSource>(collection),
         ICollection<ILogSource>
     {
@@ -108,7 +109,7 @@ internal class LoggerPatch
         {
             if (item == null)
             {
-                throw new ArgumentNullException("item", "Log sources cannot be null when added to the source list.");
+                throw new ArgumentNullException(nameof(item), "Log sources cannot be null when added to the source list.");
             }
             item.LogEvent += NewLogEventProcessor;
             Add(item);

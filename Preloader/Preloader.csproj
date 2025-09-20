@@ -5,8 +5,14 @@
         <AssemblyName>$(ModName)</AssemblyName>
         <AssemblyTitle>$(ModName) - Plugin</AssemblyTitle>
         <Product>$(ModName)</Product>
+        <Configurations>Release</Configurations>
+        <Platforms>AnyCPU</Platforms>
     </PropertyGroup>
 
+    <PropertyGroup>
+        <GameDirectory>G:\Steam\steamapps\common\Lethal Company</GameDirectory>
+    </PropertyGroup>
+    
     <ItemGroup>
         <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
 

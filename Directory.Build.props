@@ -2,8 +2,8 @@
 <Project>
     <PropertyGroup>
         <!-- Common Versioning and Module Information -->
-        <Version>0.0.1</Version>
-        <ModName>Async Loggers</ModName>
+        <Version>2.1.4</Version>
+        <ModName>AsyncLoggers</ModName>
         <ModGUID>mattymatty.AsyncLoggers</ModGUID>
         <ModNameSpace>AsyncLoggers</ModNameSpace>
         <AssemblyVersion>$(Version)</AssemblyVersion>
@@ -11,7 +11,7 @@
         <InformationalVersion>$(Version)</InformationalVersion>
         <Authors>mattymatty</Authors>
 
-        <AssemblyDescription>Example Description.</AssemblyDescription>
+        <AssemblyDescription>YEET the logs to their own thread!</AssemblyDescription>
 
         <!-- Assembly Metadata -->
         <AssemblyConfiguration>Release</AssemblyConfiguration>

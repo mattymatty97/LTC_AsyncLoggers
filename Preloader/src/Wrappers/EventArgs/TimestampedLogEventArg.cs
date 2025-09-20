@@ -1,7 +1,4 @@
-﻿using BepInEx.Logging;
-using UnityEngine.TextCore.LowLevel;
-
-namespace AsyncLoggers.Wrappers.EventArgs;
+﻿namespace AsyncLoggers.Wrappers.EventArgs;
 
 public class TimestampedLogEventArg : ExtendedLogEventArgs
 {

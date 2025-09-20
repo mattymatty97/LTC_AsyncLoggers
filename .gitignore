@@ -6,3 +6,4 @@ Releases
 **/obj
 **/GameDirectory.targets
 ShipLobby.sln.DotSettings.user
+Output/
