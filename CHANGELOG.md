@@ -1,3 +1,7 @@
+# v2.2.1
+- download sqlite library from sqlite.org using P/Invoke on winhttp.dll
+- fix missing primary Log Sources
+
 # v2.2.0
 - rewrite internals for hopefully better performance, reliability and readability
 - make BepInEx intercept UnityLogs from other threads (mainly from jobs)
