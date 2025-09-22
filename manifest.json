@@ -1,6 +1,6 @@
 {
-  "name": "AsyncLoggers",
-  "version_number": "2.2.0",
+  "name": "AsyncLoggers_Experimental",
+  "version_number": "21.2.0",
   "website_url": "https://github.com/mattymatty97/LTC_AsyncLoggers",
   "description": "YEET the logs to their own thread!",
   "dependencies": []

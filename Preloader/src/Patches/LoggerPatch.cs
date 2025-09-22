@@ -8,7 +8,6 @@ using AsyncLoggers.API;
 using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.EventArgs;
 using BepInEx.Logging;
-using JetBrains.Annotations;
 using Logger = BepInEx.Logging.Logger;
 
 namespace AsyncLoggers.Patches;
@@ -99,9 +98,11 @@ internal class LoggerPatch
         }
     }
 
-    internal class AsyncLogSourceCollection(IEnumerable<ILogSource> collection) :
-        List<ILogSource>(collection),
-        ICollection<ILogSource>
+    internal class AsyncLogSourceCollection:
+        List<ILogSource>,
+        ICollection<ILogSource>,
+        IEnumerable<ILogSource>,
+        IEnumerable
     {
         void ICollection<ILogSource>.Add(ILogSource item)
         {

@@ -25,16 +25,17 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.Linq;
+using System.Linq.Expressions;
+using System.Reflection;
+using System.Text;
+using System.Threading;
 #if !USE_SQLITEPCL_RAW
 using System.Runtime.InteropServices;
 #endif
-using System.Collections.Generic;
-using System.Reflection;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading;
 
 #if USE_CSHARP_SQLITE
 using Sqlite3 = Community.CsharpSqlite.Sqlite3;
@@ -267,7 +268,7 @@ namespace SQLite
 		private bool _open;
 		private TimeSpan _busyTimeout;
 		readonly static Dictionary<string, TableMapping> _mappings = new Dictionary<string, TableMapping> ();
-		private System.Diagnostics.Stopwatch _sw;
+		private Stopwatch _sw;
 		private long _elapsedMilliseconds = 0;
 
 		private int _transactionDepth = 0;
@@ -323,7 +324,7 @@ namespace SQLite
 		/// The DateTimeStyles value to use when parsing a DateTime property string.
 		/// </summary>
 		/// <value>The date time style.</value>
-		internal System.Globalization.DateTimeStyles DateTimeStyle { get; private set; }
+		internal DateTimeStyles DateTimeStyle { get; private set; }
 
 #if USE_SQLITEPCL_RAW && !NO_SQLITEPCL_RAW_BATTERIES
 		static SQLiteConnection ()
@@ -503,9 +504,9 @@ namespace SQLite
 #if !USE_SQLITEPCL_RAW
 		static byte[] GetNullTerminatedUtf8 (string s)
 		{
-			var utf8Length = System.Text.Encoding.UTF8.GetByteCount (s);
+			var utf8Length = Encoding.UTF8.GetByteCount (s);
 			var bytes = new byte [utf8Length + 1];
-			utf8Length = System.Text.Encoding.UTF8.GetBytes(s, 0, s.Length, bytes, 0);
+			utf8Length = Encoding.UTF8.GetBytes(s, 0, s.Length, bytes, 0);
 			return bytes;
 		}
 #endif
@@ -1617,7 +1618,7 @@ namespace SQLite
 		/// <returns>
 		/// The number of rows added to the table.
 		/// </returns>
-		public int InsertAll (System.Collections.IEnumerable objects, bool runInTransaction = true)
+		public int InsertAll (IEnumerable objects, bool runInTransaction = true)
 		{
 			var c = 0;
 			if (runInTransaction) {
@@ -1650,7 +1651,7 @@ namespace SQLite
 		/// <returns>
 		/// The number of rows added to the table.
 		/// </returns>
-		public int InsertAll (System.Collections.IEnumerable objects, string extra, bool runInTransaction = true)
+		public int InsertAll (IEnumerable objects, string extra, bool runInTransaction = true)
 		{
 			var c = 0;
 			if (runInTransaction) {
@@ -1683,7 +1684,7 @@ namespace SQLite
 		/// <returns>
 		/// The number of rows added to the table.
 		/// </returns>
-		public int InsertAll (System.Collections.IEnumerable objects, Type objType, bool runInTransaction = true)
+		public int InsertAll (IEnumerable objects, Type objType, bool runInTransaction = true)
 		{
 			var c = 0;
 			if (runInTransaction) {
@@ -2021,7 +2022,7 @@ namespace SQLite
 		/// <returns>
 		/// The number of rows modified.
 		/// </returns>
-		public int UpdateAll (System.Collections.IEnumerable objects, bool runInTransaction = true)
+		public int UpdateAll (IEnumerable objects, bool runInTransaction = true)
 		{
 			var c = 0;
 			if (runInTransaction) {
@@ -2267,7 +2268,7 @@ namespace SQLite
 		public bool StoreDateTimeAsTicks { get; }
 		public bool StoreTimeSpanAsTicks { get; }
 		public string DateTimeStringFormat { get; }
-		public System.Globalization.DateTimeStyles DateTimeStyle { get; }
+		public DateTimeStyles DateTimeStyle { get; }
 		public object Key { get; }
 		public SQLiteOpenFlags OpenFlags { get; }
 		public Action<SQLiteConnection> PreKeyAction { get; }
@@ -2387,7 +2388,7 @@ namespace SQLite
 			StoreDateTimeAsTicks = storeDateTimeAsTicks;
 			StoreTimeSpanAsTicks = storeTimeSpanAsTicks;
 			DateTimeStringFormat = dateTimeStringFormat;
-			DateTimeStyle = "o".Equals (DateTimeStringFormat, StringComparison.OrdinalIgnoreCase) || "r".Equals (DateTimeStringFormat, StringComparison.OrdinalIgnoreCase) ? System.Globalization.DateTimeStyles.RoundtripKind : System.Globalization.DateTimeStyles.None;
+			DateTimeStyle = "o".Equals (DateTimeStringFormat, StringComparison.OrdinalIgnoreCase) || "r".Equals (DateTimeStringFormat, StringComparison.OrdinalIgnoreCase) ? DateTimeStyles.RoundtripKind : DateTimeStyles.None;
 			Key = key;
 			PreKeyAction = preKeyAction;
 			PostKeyAction = postKeyAction;
@@ -2487,7 +2488,7 @@ namespace SQLite
 		}
 	}
 
-	public sealed class PreserveAttribute : System.Attribute
+	public sealed class PreserveAttribute : Attribute
 	{
 		public bool AllMembers;
 		public bool Conditional;
@@ -3299,7 +3300,7 @@ namespace SQLite
 						SQLite3.BindInt64 (stmt, index, ((DateTime)value).Ticks);
 					}
 					else {
-						SQLite3.BindText (stmt, index, ((DateTime)value).ToString (dateTimeStringFormat, System.Globalization.CultureInfo.InvariantCulture), -1, NegativePointer);
+						SQLite3.BindText (stmt, index, ((DateTime)value).ToString (dateTimeStringFormat, CultureInfo.InvariantCulture), -1, NegativePointer);
 					}
 				}
 				else if (value is DateTimeOffset) {
@@ -3381,7 +3382,7 @@ namespace SQLite
 					else {
 						var text = SQLite3.ColumnString (stmt, index);
 						TimeSpan resultTime;
-						if (!TimeSpan.TryParseExact (text, "c", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.TimeSpanStyles.None, out resultTime)) {
+						if (!TimeSpan.TryParseExact (text, "c", CultureInfo.InvariantCulture, TimeSpanStyles.None, out resultTime)) {
 							resultTime = TimeSpan.Parse (text);
 						}
 						return resultTime;
@@ -3394,7 +3395,7 @@ namespace SQLite
 					else {
 						var text = SQLite3.ColumnString (stmt, index);
 						DateTime resultDate;
-						if (!DateTime.TryParseExact (text, _conn.DateTimeStringFormat, System.Globalization.CultureInfo.InvariantCulture, _conn.DateTimeStyle, out resultDate)) {
+						if (!DateTime.TryParseExact (text, _conn.DateTimeStringFormat, CultureInfo.InvariantCulture, _conn.DateTimeStyle, out resultDate)) {
 							resultDate = DateTime.Parse (text);
 						}
 						return resultDate;
@@ -3521,7 +3522,7 @@ namespace SQLite
 					fastSetter = CreateNullableTypedSetterDelegate<T, TimeSpan> (column, (stmt, index) => {
 						var text = SQLite3.ColumnString (stmt, index);
 						TimeSpan resultTime;
-						if (!TimeSpan.TryParseExact (text, "c", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.TimeSpanStyles.None, out resultTime)) {
+						if (!TimeSpan.TryParseExact (text, "c", CultureInfo.InvariantCulture, TimeSpanStyles.None, out resultTime)) {
 							resultTime = TimeSpan.Parse (text);
 						}
 						return resultTime;
@@ -3538,7 +3539,7 @@ namespace SQLite
 					fastSetter = CreateNullableTypedSetterDelegate<T, DateTime> (column, (stmt, index) => {
 						var text = SQLite3.ColumnString (stmt, index);
 						DateTime resultDate;
-						if (!DateTime.TryParseExact (text, conn.DateTimeStringFormat, System.Globalization.CultureInfo.InvariantCulture, conn.DateTimeStyle, out resultDate)) {
+						if (!DateTime.TryParseExact (text, conn.DateTimeStringFormat, CultureInfo.InvariantCulture, conn.DateTimeStyle, out resultDate)) {
 							resultDate = DateTime.Parse (text);
 						}
 						return resultDate;
@@ -4263,11 +4264,11 @@ namespace SQLite
 					//
 					// Work special magic for enumerables
 					//
-					if (val != null && val is System.Collections.IEnumerable && !(val is string) && !(val is System.Collections.Generic.IEnumerable<byte>)) {
-						var sb = new System.Text.StringBuilder ();
+					if (val != null && val is IEnumerable && !(val is string) && !(val is IEnumerable<byte>)) {
+						var sb = new StringBuilder ();
 						sb.Append ("(");
 						var head = "";
-						foreach (var a in (System.Collections.IEnumerable)val) {
+						foreach (var a in (IEnumerable)val) {
 							queryArgs.Add (a);
 							sb.Append (head);
 							sb.Append ("?");
@@ -4386,7 +4387,7 @@ namespace SQLite
 			return GenerateCommand ("*").ExecuteDeferredQuery<T> ().GetEnumerator ();
 		}
 
-		System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator ()
+		IEnumerator IEnumerable.GetEnumerator ()
 		{
 			return GetEnumerator ();
 		}
@@ -4539,7 +4540,7 @@ namespace SQLite
 
 		const string LibraryPath = "sqlite3";
 
-#if !USE_CSHARP_SQLITE && !USE_WP8_NATIVE_SQLITE && !USE_SQLITEPCL_RAW
+#if !USE_CSHARP_SQLITE && !USE_WP8_NATIVE_SQLITE && !USE_SQLITEPCL_RAW && !USE_SQLITE_CALLBACKS
 		[DllImport(LibraryPath, EntryPoint = "sqlite3_threadsafe", CallingConvention=CallingConvention.Cdecl)]
 		public static extern int Threadsafe ();
 
@@ -4714,6 +4715,429 @@ namespace SQLite
 
 		[DllImport (LibraryPath, EntryPoint = "sqlite3_backup_finish", CallingConvention = CallingConvention.Cdecl)]
 		public static extern Result BackupFinish (Sqlite3BackupHandle backup);
+#elif USE_SQLITE_CALLBACKS
+
+		// Delegates
+		public delegate int ThreadsafeDelegate();
+		public delegate Result OpenDelegate([MarshalAs(UnmanagedType.LPStr)] string filename, out IntPtr db);
+		public delegate Result OpenV2Delegate([MarshalAs(UnmanagedType.LPStr)] string filename, out IntPtr db, int flags, [MarshalAs (UnmanagedType.LPStr)] string zvfs);
+		public delegate Result OpenV2BytesDelegate(byte[] filename, out IntPtr db, int flags, [MarshalAs (UnmanagedType.LPStr)] string zvfs);
+		public delegate Result Open16Delegate([MarshalAs(UnmanagedType.LPWStr)] string filename, out IntPtr db);
+		public delegate Result EnableLoadExtensionDelegate(IntPtr db, int onoff);
+		public delegate Result CloseDelegate(IntPtr db);
+		public delegate Result Close2Delegate(IntPtr db);
+		public delegate Result InitializeDelegate();
+		public delegate Result ShutdownDelegate();
+		public delegate Result ConfigDelegate(ConfigOption option);
+		public delegate int SetDirectoryDelegate(uint directoryType, string directoryPath);
+		public delegate Result BusyTimeoutDelegate(IntPtr db, int milliseconds);
+		public delegate int ChangesDelegate(IntPtr db);
+		public delegate Result Prepare2StringDelegate(IntPtr db, [MarshalAs(UnmanagedType.LPStr)] string sql, int numBytes, out IntPtr stmt, IntPtr pzTail);
+#if NETFX_CORE
+		public delegate Result Prepare2BytesDelegate(IntPtr db, byte[] queryBytes, int numBytes, out IntPtr stmt, IntPtr pzTail);
+#endif
+		public delegate Result StepDelegate(IntPtr stmt);
+		public delegate Result ResetDelegate(IntPtr stmt);
+		public delegate Result FinalizeDelegate(IntPtr stmt);
+		public delegate long LastInsertRowidDelegate(IntPtr db);
+		public delegate IntPtr ErrmsgDelegate(IntPtr db);
+		public delegate int BindParameterIndexDelegate(IntPtr stmt, [MarshalAs(UnmanagedType.LPStr)] string name);
+		public delegate int BindNullDelegate(IntPtr stmt, int index);
+		public delegate int BindIntDelegate(IntPtr stmt, int index, int val);
+		public delegate int BindInt64Delegate(IntPtr stmt, int index, long val);
+		public delegate int BindDoubleDelegate(IntPtr stmt, int index, double val);
+		public delegate int BindTextDelegate(IntPtr stmt, int index, [MarshalAs(UnmanagedType.LPWStr)] string val, int n, IntPtr free);
+		public delegate int BindBlobDelegate(IntPtr stmt, int index, byte[] val, int n, IntPtr free);
+		public delegate int ColumnCountDelegate(IntPtr stmt);
+		public delegate IntPtr ColumnNameDelegate(IntPtr stmt, int index);
+		public delegate IntPtr ColumnName16InternalDelegate(IntPtr stmt, int index);
+		public delegate ColType ColumnTypeDelegate(IntPtr stmt, int index);
+		public delegate int ColumnIntDelegate(IntPtr stmt, int index);
+		public delegate long ColumnInt64Delegate(IntPtr stmt, int index);
+		public delegate double ColumnDoubleDelegate(IntPtr stmt, int index);
+		public delegate IntPtr ColumnTextDelegate(IntPtr stmt, int index);
+		public delegate IntPtr ColumnText16Delegate(IntPtr stmt, int index);
+		public delegate IntPtr ColumnBlobDelegate(IntPtr stmt, int index);
+		public delegate int ColumnBytesDelegate(IntPtr stmt, int index);
+		public delegate Result GetResultDelegate(Sqlite3DatabaseHandle db);
+		public delegate ExtendedResult ExtendedErrCodeDelegate(IntPtr db);
+		public delegate int LibVersionNumberDelegate();
+		public delegate Sqlite3BackupHandle BackupInitDelegate(Sqlite3DatabaseHandle destDb, [MarshalAs (UnmanagedType.LPStr)] string destName, Sqlite3DatabaseHandle sourceDb, [MarshalAs (UnmanagedType.LPStr)] string sourceName);
+		public delegate Result BackupStepDelegate(Sqlite3BackupHandle backup, int numPages);
+		public delegate Result BackupFinishDelegate(Sqlite3BackupHandle backup);
+
+		public static Callbacks DllCallbacks;
+		
+		private static T Require<T>(T cb, string name) where T : class
+		{
+			if (cb == null)
+				throw new NotImplementedException($"{name} callback is not set.");
+			return cb;
+		}
+
+		public static int Threadsafe()
+		{
+			var cb = Require(DllCallbacks.Threadsafe, nameof(DllCallbacks.Threadsafe));
+			return cb();
+		}
+
+		public static Result Open(string filename, out IntPtr db)
+		{
+			var cb = Require(DllCallbacks.Open, nameof(DllCallbacks.Open));
+			return cb(filename, out db);
+		}
+
+		public static Result Open(string filename, out IntPtr db, int flags, string zvfs)
+		{
+			var cb = Require(DllCallbacks.OpenV2, nameof(DllCallbacks.OpenV2));
+			return cb(filename, out db, flags, zvfs);
+		}
+
+		public static Result Open(byte[] filename, out IntPtr db, int flags, string zvfs)
+		{
+			var cb = Require(DllCallbacks.OpenV2Bytes, nameof(DllCallbacks.OpenV2Bytes));
+			return cb(filename, out db, flags, zvfs);
+		}
+
+		public static Result Open16(string filename, out IntPtr db)
+		{
+			var cb = Require(DllCallbacks.Open16, nameof(DllCallbacks.Open16));
+			return cb(filename, out db);
+		}
+
+		public static Result EnableLoadExtension(IntPtr db, int onoff)
+		{
+			var cb = Require(DllCallbacks.EnableLoadExtension, nameof(DllCallbacks.EnableLoadExtension));
+			return cb(db, onoff);
+		}
+
+		public static Result Close(IntPtr db)
+		{
+			var cb = Require(DllCallbacks.Close, nameof(DllCallbacks.Close));
+			return cb(db);
+		}
+
+		public static Result Close2(IntPtr db)
+		{
+			var cb = Require(DllCallbacks.Close2, nameof(DllCallbacks.Close2));
+			return cb(db);
+		}
+
+		public static Result Initialize()
+		{
+			var cb = Require(DllCallbacks.Initialize, nameof(DllCallbacks.Initialize));
+			return cb();
+		}
+
+		public static Result Shutdown()
+		{
+			var cb = Require(DllCallbacks.Shutdown, nameof(DllCallbacks.Shutdown));
+			return cb();
+		}
+
+		public static Result Config(ConfigOption option)
+		{
+			var cb = Require(DllCallbacks.Config, nameof(DllCallbacks.Config));
+			return cb(option);
+		}
+
+		public static int SetDirectory(uint directoryType, string directoryPath)
+		{
+			var cb = Require(DllCallbacks.SetDirectory, nameof(DllCallbacks.SetDirectory));
+			return cb(directoryType, directoryPath);
+		}
+
+		public static Result BusyTimeout(IntPtr db, int milliseconds)
+		{
+			var cb = Require(DllCallbacks.BusyTimeout, nameof(DllCallbacks.BusyTimeout));
+			return cb(db, milliseconds);
+		}
+
+		public static int Changes(IntPtr db)
+		{
+			var cb = Require(DllCallbacks.Changes, nameof(DllCallbacks.Changes));
+			return cb(db);
+		}
+
+		public static Result Prepare2(IntPtr db, string sql, int numBytes, out IntPtr stmt, IntPtr pzTail)
+		{
+			var cb = Require(DllCallbacks.Prepare2String, nameof(DllCallbacks.Prepare2String));
+			return cb(db, sql, numBytes, out stmt, pzTail);
+		}
+
+#if NETFX_CORE
+		public static Result Prepare2(IntPtr db, byte[] queryBytes, int numBytes, out IntPtr stmt, IntPtr pzTail)
+		{
+			var cb = Require(DllCallbacks.Prepare2Bytes, nameof(DllCallbacks.Prepare2Bytes));
+			return cb(db, queryBytes, numBytes, out stmt, pzTail);
+		}
+#endif
+
+		public static IntPtr Prepare2(IntPtr db, string query)
+		{
+			IntPtr stmt;
+#if NETFX_CORE
+            byte[] queryBytes = System.Text.UTF8Encoding.UTF8.GetBytes (query);
+            var r = Prepare2 (db, queryBytes, queryBytes.Length, out stmt, IntPtr.Zero);
+#else
+            var r = Prepare2 (db, query, UTF8Encoding.UTF8.GetByteCount (query), out stmt, IntPtr.Zero);
+#endif
+			if (r != Result.OK) {
+				throw SQLiteException.New (r, GetErrmsg (db));
+			}
+			return stmt;
+		}
+
+		public static Result Step(IntPtr stmt)
+		{
+			var cb = Require(DllCallbacks.Step, nameof(DllCallbacks.Step));
+			return cb(stmt);
+		}
+
+		public static Result Reset(IntPtr stmt)
+		{
+			var cb = Require(DllCallbacks.Reset, nameof(DllCallbacks.Reset));
+			return cb(stmt);
+		}
+
+		public static Result Finalize(IntPtr stmt)
+		{
+			var cb = Require(DllCallbacks.Finalize, nameof(DllCallbacks.Finalize));
+			return cb(stmt);
+		}
+
+		public static long LastInsertRowid(IntPtr db)
+		{
+			var cb = Require(DllCallbacks.LastInsertRowid, nameof(DllCallbacks.LastInsertRowid));
+			return cb(db);
+		}
+
+		public static IntPtr Errmsg(IntPtr db)
+		{
+			var cb = Require(DllCallbacks.Errmsg, nameof(DllCallbacks.Errmsg));
+			return cb(db);
+		}
+
+		public static string GetErrmsg(IntPtr db)
+		{
+			return Marshal.PtrToStringUni(Errmsg(db));
+		}
+
+		public static int BindParameterIndex(IntPtr stmt, string name)
+		{
+			var cb = Require(DllCallbacks.BindParameterIndex, nameof(DllCallbacks.BindParameterIndex));
+			return cb(stmt, name);
+		}
+
+		public static int BindNull(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.BindNull, nameof(DllCallbacks.BindNull));
+			return cb(stmt, index);
+		}
+
+		public static int BindInt(IntPtr stmt, int index, int val)
+		{
+			var cb = Require(DllCallbacks.BindInt, nameof(DllCallbacks.BindInt));
+			return cb(stmt, index, val);
+		}
+
+		public static int BindInt64(IntPtr stmt, int index, long val)
+		{
+			var cb = Require(DllCallbacks.BindInt64, nameof(DllCallbacks.BindInt64));
+			return cb(stmt, index, val);
+		}
+
+		public static int BindDouble(IntPtr stmt, int index, double val)
+		{
+			var cb = Require(DllCallbacks.BindDouble, nameof(DllCallbacks.BindDouble));
+			return cb(stmt, index, val);
+		}
+
+		public static int BindText(IntPtr stmt, int index, string val, int n, IntPtr free)
+		{
+			var cb = Require(DllCallbacks.BindText, nameof(DllCallbacks.BindText));
+			return cb(stmt, index, val, n, free);
+		}
+
+		public static int BindBlob(IntPtr stmt, int index, byte[] val, int n, IntPtr free)
+		{
+			var cb = Require(DllCallbacks.BindBlob, nameof(DllCallbacks.BindBlob));
+			return cb(stmt, index, val, n, free);
+		}
+
+		public static int ColumnCount(IntPtr stmt)
+		{
+			var cb = Require(DllCallbacks.ColumnCount, nameof(DllCallbacks.ColumnCount));
+			return cb(stmt);
+		}
+
+		public static IntPtr ColumnName(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.ColumnName, nameof(DllCallbacks.ColumnName));
+			return cb(stmt, index);
+		}
+
+		static IntPtr ColumnName16Internal(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.ColumnName16Internal, nameof(DllCallbacks.ColumnName16Internal));
+			return cb(stmt, index);
+		}
+
+		public static string ColumnName16(IntPtr stmt, int index)
+		{
+			return Marshal.PtrToStringUni(ColumnName16Internal(stmt, index));
+		}
+
+		public static ColType ColumnType(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.ColumnType, nameof(DllCallbacks.ColumnType));
+			return cb(stmt, index);
+		}
+
+		public static int ColumnInt(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.ColumnInt, nameof(DllCallbacks.ColumnInt));
+			return cb(stmt, index);
+		}
+
+		public static long ColumnInt64(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.ColumnInt64, nameof(DllCallbacks.ColumnInt64));
+			return cb(stmt, index);
+		}
+
+		public static double ColumnDouble(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.ColumnDouble, nameof(DllCallbacks.ColumnDouble));
+			return cb(stmt, index);
+		}
+
+		public static IntPtr ColumnText(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.ColumnText, nameof(DllCallbacks.ColumnText));
+			return cb(stmt, index);
+		}
+
+		public static IntPtr ColumnText16(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.ColumnText16, nameof(DllCallbacks.ColumnText16));
+			return cb(stmt, index);
+		}
+
+		public static IntPtr ColumnBlob(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.ColumnBlob, nameof(DllCallbacks.ColumnBlob));
+			return cb(stmt, index);
+		}
+
+		public static int ColumnBytes(IntPtr stmt, int index)
+		{
+			var cb = Require(DllCallbacks.ColumnBytes, nameof(DllCallbacks.ColumnBytes));
+			return cb(stmt, index);
+		}
+
+		public static string ColumnString(IntPtr stmt, int index)
+		{
+			return Marshal.PtrToStringUni(ColumnText16(stmt, index));
+		}
+
+		public static byte[] ColumnByteArray(IntPtr stmt, int index)
+		{
+			int length = ColumnBytes(stmt, index);
+			var result = new byte[length];
+			if (length > 0)
+				Marshal.Copy(ColumnBlob(stmt, index), result, 0, length);
+			return result;
+		}
+
+		public static Result GetResult(Sqlite3DatabaseHandle db)
+		{
+			var cb = Require(DllCallbacks.GetResult, nameof(DllCallbacks.GetResult));
+			return cb(db);
+		}
+
+		public static ExtendedResult ExtendedErrCode(IntPtr db)
+		{
+			var cb = Require(DllCallbacks.ExtendedErrCode, nameof(DllCallbacks.ExtendedErrCode));
+			return cb(db);
+		}
+
+		public static int LibVersionNumber()
+		{
+			var cb = Require(DllCallbacks.LibVersionNumber, nameof(DllCallbacks.LibVersionNumber));
+			return cb();
+		}
+
+		public static Sqlite3BackupHandle BackupInit(Sqlite3DatabaseHandle destDb, string destName, Sqlite3DatabaseHandle sourceDb, string sourceName)
+		{
+			var cb = Require(DllCallbacks.BackupInit, nameof(DllCallbacks.BackupInit));
+			return cb(destDb, destName, sourceDb, sourceName);
+		}
+
+		public static Result BackupStep(Sqlite3BackupHandle backup, int numPages)
+		{
+			var cb = Require(DllCallbacks.BackupStep, nameof(DllCallbacks.BackupStep));
+			return cb(backup, numPages);
+		}
+
+		public static Result BackupFinish(Sqlite3BackupHandle backup)
+		{
+			var cb = Require(DllCallbacks.BackupFinish, nameof(DllCallbacks.BackupFinish));
+			return cb(backup);
+		}
+
+		public struct Callbacks
+		{
+			public ThreadsafeDelegate Threadsafe;
+			public OpenDelegate Open;
+			public OpenV2Delegate OpenV2;
+			public OpenV2BytesDelegate OpenV2Bytes;
+			public Open16Delegate Open16;
+			public EnableLoadExtensionDelegate EnableLoadExtension;
+			public CloseDelegate Close;
+			public Close2Delegate Close2;
+			public InitializeDelegate Initialize;
+			public ShutdownDelegate Shutdown;
+			public ConfigDelegate Config;
+			public SetDirectoryDelegate SetDirectory;
+			public BusyTimeoutDelegate BusyTimeout;
+			public ChangesDelegate Changes;
+			public Prepare2StringDelegate Prepare2String;
+#if NETFX_CORE
+			public Prepare2BytesDelegate Prepare2Bytes;
+#endif
+			public StepDelegate Step;
+			public ResetDelegate Reset;
+			public FinalizeDelegate Finalize;
+			public LastInsertRowidDelegate LastInsertRowid;
+			public ErrmsgDelegate Errmsg;
+			public BindParameterIndexDelegate BindParameterIndex;
+			public BindNullDelegate BindNull;
+			public BindIntDelegate BindInt;
+			public BindInt64Delegate BindInt64;
+			public BindDoubleDelegate BindDouble;
+			public BindTextDelegate BindText;
+			public BindBlobDelegate BindBlob;
+			public ColumnCountDelegate ColumnCount;
+			public ColumnNameDelegate ColumnName;
+			public ColumnName16InternalDelegate ColumnName16Internal;
+			public ColumnTypeDelegate ColumnType;
+			public ColumnIntDelegate ColumnInt;
+			public ColumnInt64Delegate ColumnInt64;
+			public ColumnDoubleDelegate ColumnDouble;
+			public ColumnTextDelegate ColumnText;
+			public ColumnText16Delegate ColumnText16;
+			public ColumnBlobDelegate ColumnBlob;
+			public ColumnBytesDelegate ColumnBytes;
+			public GetResultDelegate GetResult;
+			public ExtendedErrCodeDelegate ExtendedErrCode;
+			public LibVersionNumberDelegate LibVersionNumber;
+			public BackupInitDelegate BackupInit;
+			public BackupStepDelegate BackupStep;
+			public BackupFinishDelegate BackupFinish;
+		}
+
+		
 #else
 		public static Result Open (string filename, out Sqlite3DatabaseHandle db)
 		{

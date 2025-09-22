@@ -10,7 +10,7 @@
     </PropertyGroup>
 
     <PropertyGroup>
-        <GameDirectory>G:\Steam\steamapps\common\Lethal Company</GameDirectory>
+        <DefineConstants>USE_SQLITE_CALLBACKS</DefineConstants>
     </PropertyGroup>
     
     <ItemGroup>

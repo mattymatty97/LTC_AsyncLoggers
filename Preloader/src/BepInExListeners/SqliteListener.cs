@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Globalization;
-using AsyncLoggers.Wrappers;
 using AsyncLoggers.Wrappers.EventArgs;
 using BepInEx.Logging;
 using SQLite;
@@ -30,7 +29,11 @@ namespace AsyncLoggers.BepInExListeners
 
         public void LogEvent(object sender, LogEventArgs eventArgs)
         {
-            var context = eventArgs as ExtendedLogEventArgs;
+            if (eventArgs is not ExtendedLogEventArgs context)
+            {
+                context = ExtendedLogEventArgs.CreateNewHolder(eventArgs);
+            }
+            
             var log = new Tables.Logs
             {
                 execution_id = SqliteLogger.ExecutionId,
@@ -45,6 +48,7 @@ namespace AsyncLoggers.BepInExListeners
                 message = context.Data?.ToString(),
                 stacktrace = context.StackTrace
             };
+            
             try
             {
                 SqliteLogger.Connection.Insert(log);
@@ -63,7 +67,7 @@ namespace AsyncLoggers.BepInExListeners
             {
                 [PrimaryKey, AutoIncrement] public int _id { get; set; }
                 [Indexed] public int execution_id { get; set; }
-                [Indexed] public ulong UUID { get; set; }
+                [Indexed] public long UUID { get; set; }
 
                 [Indexed] public int ThreadID { get; set; }
 

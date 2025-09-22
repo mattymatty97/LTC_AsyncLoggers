@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Threading;
 using AsyncLoggers.BepInExListeners;
@@ -16,24 +16,14 @@ using Logger = BepInEx.Logging.Logger;
 
 namespace AsyncLoggers.Patches;
 
-internal class ChainloaderPatch
+internal static class ChainloaderPatch
 {
-    //REMINDER!!: do not patch Chainloader.Start!!!!
-    
-    private static Hook _chainloaderLoadedHook;
-
     internal static void InitMonoMod()
     {
         var methodInfo =
             AccessTools.Method(typeof(Chainloader), nameof(Chainloader.Initialize));
         
         AsyncLoggers.Hooks.Add(new Hook(methodInfo, DetourInitialize));
-        
-        methodInfo =
-            AccessTools.Method(typeof(Logger), nameof(Logger.LogMessage));
-
-        _chainloaderLoadedHook = new Hook(methodInfo, DetourLogMessage);
-        AsyncLoggers.Hooks.Add(_chainloaderLoadedHook);
     }
 
     private static void DetourInitialize(Action<string, bool, ICollection<LogEventArgs>> orig, 
@@ -46,36 +36,31 @@ internal class ChainloaderPatch
         InitializePostfix();
     }
     
-    private static void DetourLogMessage(Action<object> orig, object data)
+    private static void DetourStart(Action orig)
     {
-        orig(data);
-
-        if (data is string message && message.Equals("Chainloader startup complete"))
-        {
-            _chainloaderLoadedHook?.Dispose();
-            AsyncLoggers.Hooks.Remove(_chainloaderLoadedHook);
-            try
-            {
-                SqliteLogger.WriteMods(Chainloader.PluginInfos.Values);
-            }
-            catch (Exception ex)
-            {
-                AsyncLoggers.EmergencyLog.LogError($"Exception logging mods {ex}");
-            }
-        }
+        StartPrefix();
+        orig();
+        StartPostfix();
     }
     
     private static void InitializePrefix()
     {
         try
         {
+            var oldSourcesList = Logger.Sources;
+            
             var sourcesField =
                 typeof(Logger).GetField("<Sources>k__BackingField", BindingFlags.Static | BindingFlags.NonPublic);
-
-            var oldSourcesList = Logger.Sources;
-            var newSourcesList = new LoggerPatch.AsyncLogSourceCollection(oldSourcesList);
+            ICollection<ILogSource> newSourcesList = new LoggerPatch.AsyncLogSourceCollection();
             sourcesField!.SetValue(null, newSourcesList);
-            oldSourcesList.Clear();
+            
+            var oldSourcesCopy = oldSourcesList.ToArray();
+
+            foreach (var oldSource in oldSourcesCopy)
+            {
+                oldSourcesList.Remove(oldSource);
+                newSourcesList.Add(oldSource);
+            }
         }
         catch (Exception ex)
         {
@@ -134,6 +119,12 @@ internal class ChainloaderPatch
         
         ProxyClass.AppendQuittingCallback();
         
+        var methodInfo = AccessTools.Method(typeof(Chainloader), nameof(Chainloader.Start));
+        AsyncLoggers.Hooks.Add(new Hook(methodInfo, DetourStart));
+    }
+
+    private static void StartPrefix()
+    {
         try
         {
             var threadedEvent = typeof(Application).GetEvent("logMessageReceivedThreaded", BindingFlags.Static | BindingFlags.Public);
@@ -147,6 +138,21 @@ internal class ChainloaderPatch
         catch (Exception ex)
         {
             AsyncLoggers.EmergencyLog.LogError($"Exception in Chainloader.Start prefix {ex}");
+        }
+    }
+    
+    private static void StartPostfix()
+    {
+        if (!Chainloader._loaded)
+            return;
+
+        try
+        {
+            SqliteLogger.WriteMods(Chainloader.PluginInfos.Values);
+        }
+        catch (Exception ex)
+        {
+            AsyncLoggers.EmergencyLog.LogError($"Exception logging mods {ex}");
         }
     }
 

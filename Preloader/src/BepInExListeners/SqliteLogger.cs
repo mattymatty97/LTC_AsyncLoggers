@@ -1,35 +1,29 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
+using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AsyncLoggers.Config;
+using AsyncLoggers.Proxy.WinAPI;
 using BepInEx;
 using SQLite;
 
 namespace AsyncLoggers.BepInExListeners
 {
-    public static class SqliteChecker
-    {
-        internal static bool IsLoaded()
-        {
-            try
-            {
-                SQLite3.LibVersionNumber();
-                return true;
-            }
-            catch (DllNotFoundException)
-            {
-                return false;
-            }
-        }
-    }
-
+    
     internal static class SqliteLogger
     {
+        const string EolUrl            = "https://endoflife.date/api/v1/products/sqlite/releases/latest";
+        const string DownloadUrl       = "https://www.sqlite.org/{0}/sqlite-dll-win-x64-{1}.zip";
+        const string DownloadFileName  = "sqlite-dll-win-x64-{0}.zip";
+        const string DLLFileName       = "sqlite3.dll";
+        const int    MinLibraryVersion = 350004;
 
-        private const string SubFolder = "sqlite_native";
+        private static Kernel32.NativeLibrary _sqliteLibrary;
+
         internal static bool Enabled { get; set; }
 
         internal static SQLiteConnection Connection { get; private set; }
@@ -37,64 +31,63 @@ namespace AsyncLoggers.BepInExListeners
 
         internal static void Init(string outputFile)
         {
-            const string dllFileName = "sqlite3.dll";
-            var assemblyLocation = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            var sqliteFolderPath = Path.Combine(assemblyLocation!, SubFolder);
-            var dllPath = Path.Combine(sqliteFolderPath, dllFileName);
-
-            // Load the DLL dynamically
-            var loaded = LoadNativeDll(dllPath);
-            Enabled = loaded && PluginConfig.DbLogger.Enabled.Value && SqliteChecker.IsLoaded();
-            if (PluginConfig.DbLogger.Enabled.Value)
+            if (!PluginConfig.DbLogger.Enabled.Value)
             {
+                Enabled = false;
+                return;
+            }
+            
+            var hasSqlite = EnsureSqliteLibrary();
+
+            if (!hasSqlite)
+            {
+                if (PluginConfig.DbLogger.Enabled.Value)
+                    AsyncLoggers.Log.LogError("Could not load SQLite library! DBLogger will be forcefully disabled!");
+                Enabled = false;
+                return;
+            }
+            
+            Enabled = true;
+            try
+            {
+                AsyncLoggers.Log.LogDebug($"creating db");
                 try
                 {
-                    if (SqliteChecker.IsLoaded())
+                    if (File.Exists(outputFile))
                     {
-                        AsyncLoggers.Log.LogDebug($"creating db");
-                        try
+                        var filesize = new FileInfo(outputFile).Length;
+                        AsyncLoggers.Log.LogDebug($"db existed and was {filesize} bytes");
+                        if (filesize > PluginConfig.DbLogger.RotationSize.Value)
                         {
-                            if (File.Exists(outputFile))
-                            {
-                                var filesize = new FileInfo(outputFile).Length;
-                                AsyncLoggers.Log.LogDebug($"db existed and was {filesize} bytes");
-                                if (filesize > PluginConfig.DbLogger.RotationSize.Value)
-                                {
-                                    AsyncLoggers.Log.LogWarning($"rotating db file");
-                                    var rotationFile = outputFile + ".1";
-                                    if (File.Exists(rotationFile))
-                                        File.Delete(rotationFile);
-                                    File.Move(outputFile, rotationFile);
-                                }
-                            }
+                            AsyncLoggers.Log.LogWarning($"rotating db file");
+                            var rotationFile = outputFile + ".1";
+                            if (File.Exists(rotationFile))
+                                File.Delete(rotationFile);
+                            File.Move(outputFile, rotationFile);
                         }
-                        catch (Exception ex)
-                        {
-                            AsyncLoggers.Log.LogError($"Exception while rotating files! {ex}");
-                            AsyncLoggers.Log.LogWarning($"Db defaulted to append mode");
-                        }
-
-                        Connection = new SQLiteConnection(outputFile);
-						
-						Connection.ExecuteScalar<int>("PRAGMA journal_mode=WAL;");
-
-                        Connection.CreateTable<Tables.Executions>(CreateFlags.AutoIncPK);
-                        Connection.CreateTable<Tables.Mods>(CreateFlags.AutoIncPK);
-
-                        ExecutionId = GetExecution();
-
-                        AsyncLoggers.Log.LogDebug($"ExecutionID is {ExecutionId}");
-                    }
-                    else
-                    {
-                        AsyncLoggers.Log.LogError($"No Sqlite dll found disabling Database!");
                     }
                 }
                 catch (Exception ex)
                 {
-                    AsyncLoggers.Log.LogError($"Exception while initializing the database! {ex}");
-                    Enabled = false;
+                    AsyncLoggers.Log.LogError($"Exception while rotating files! {ex}");
+                    AsyncLoggers.Log.LogWarning($"Db defaulted to append mode");
                 }
+
+                Connection = new SQLiteConnection(outputFile);
+						
+                Connection.ExecuteScalar<int>("PRAGMA journal_mode=WAL;");
+
+                Connection.CreateTable<Tables.Executions>(CreateFlags.AutoIncPK);
+                Connection.CreateTable<Tables.Mods>(CreateFlags.AutoIncPK);
+
+                ExecutionId = GetExecution();
+
+                AsyncLoggers.Log.LogDebug($"ExecutionID is {ExecutionId}");
+            }
+            catch (Exception ex)
+            {
+                AsyncLoggers.Log.LogError($"Exception while initializing the database! {ex}");
+                Enabled = false;
             }
         }
 
@@ -148,22 +141,175 @@ namespace AsyncLoggers.BepInExListeners
             }
         }
         
-        private static bool LoadNativeDll(string dllPath)
+        private static bool EnsureSqliteLibrary()
         {
-            var pDll = LoadLibrary(dllPath);
-
-            if (pDll == IntPtr.Zero)
-            {
-                AsyncLoggers.Log.LogError(
-                    $"Failed to load SQLite native DLL from path: {dllPath}. Error code: {Marshal.GetLastWin32Error()}");
+            
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 return false;
+
+            //try to load the library
+            var hasSqlite = LoadSqliteLibrary();
+            
+            //download library
+            if (!hasSqlite)
+            {
+                DownloadSqliteLibrary();
+                //try to load the library again
+                hasSqlite = LoadSqliteLibrary();
             }
-        
-            AsyncLoggers.Log.LogInfo("SQLite DLL loaded successfully.");
-            return true;
+            
+            //if we have the library load all delegates
+            if (hasSqlite)
+            {
+                InitializeCallbacks();
+            }
+            
+            return hasSqlite;
+        }
+
+        private static bool LoadSqliteLibrary()
+        {
+            var cacheFolder = Path.Combine(Paths.BepInExRootPath, "cache", AsyncLoggers.NAME);
+            var dllPath = Path.Combine(cacheFolder, DLLFileName);
+            // Check if the dll exists
+            if (File.Exists(dllPath))
+            {   
+                //try to load it
+                _sqliteLibrary = new Kernel32.NativeLibrary(dllPath);
+                if (_sqliteLibrary.IsLoaded)
+                {
+                    //try to grab the library version
+                    var versionDelegate = _sqliteLibrary.GetDelegate<SQLite3.LibVersionNumberDelegate>("sqlite3_libversion_number");
+                    if (versionDelegate != null)
+                    {
+                        try
+                        {
+                            var version = versionDelegate();
+                            if (version >= MinLibraryVersion)
+                                return true;
+                            AsyncLoggers.Log.LogWarning($"SQLite library is outdated! {version}");
+                        }
+                        catch (Exception ex)
+                        {
+                            AsyncLoggers.Log.LogError("Exception while reading sqlite version: \n" + ex);
+                        }
+                    }
+                    else
+                        AsyncLoggers.Log.LogWarning("SQLite library does not have a version! ( Wrong DLL? )");
+                }
+                else
+                    AsyncLoggers.Log.LogWarning("could not load SQLite library!");
+            }
+            else
+                AsyncLoggers.Log.LogWarning("missing SQLite library!");
+            
+            return false;
+        }
+
+        private static void DownloadSqliteLibrary()
+        {
+            var cacheFolder = Path.Combine(Paths.BepInExRootPath, "cache", AsyncLoggers.NAME);
+            var eolRegex = new Regex("\"latest\":{\"name\":\"(\\d+\\.\\d+\\.\\d+)\",\"date\":\"(\\d+-\\d+-\\d+)\"");
+            
+            try
+            {
+                var eolJson = WinHttp.DownloadAsText(EolUrl);
+                
+                AsyncLoggers.Log.LogWarning(eolJson);
+                
+                var matches = eolRegex.Matches(eolJson);
+                
+                if (matches.Count == 0)
+                    return;
+                
+                var match = matches[0];
+                
+                AsyncLoggers.Log.LogWarning(match.Groups[1].Value);
+                AsyncLoggers.Log.LogWarning(match.Groups[2].Value);
+                
+                var version = match.Groups[1].Value.Split(".");
+                var date = match.Groups[2].Value.Split("-");
+                var sb = new StringBuilder(version[0]);
+                for (var i = 1; i < 4; i++)
+                {
+                    var val = i < version.Length ? int.Parse(version[i]) : 0;
+                    sb.Append(val.ToString("D2"));
+                }
+                var versionString = sb.ToString();
+                AsyncLoggers.Log.LogWarning(versionString);
+                
+                var downloadUrl = string.Format(DownloadUrl, date[0], versionString);
+                var downloadFileName = string.Format(DownloadFileName, versionString);
+                
+                Directory.CreateDirectory(cacheFolder);
+                
+                WinHttp.DownloadFile(downloadUrl, downloadFileName);
+
+                using var zipStream = File.OpenRead(downloadFileName);
+                using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
+                archive.ExtractToDirectory(cacheFolder);
+            }
+            catch (Exception ex)
+            {
+                AsyncLoggers.Log.LogError("Exception while downloading sqlite library: \n" + ex);
+            }
         }
         
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern IntPtr LoadLibrary(string dllToLoad);
+        
+        private static void InitializeCallbacks()
+        {
+            var callbacks = new SQLite3.Callbacks
+            {
+                Threadsafe = _sqliteLibrary.GetDelegate<SQLite3.ThreadsafeDelegate>("sqlite3_threadsafe"),
+                Open = _sqliteLibrary.GetDelegate<SQLite3.OpenDelegate>("sqlite3_open"),
+                OpenV2 = _sqliteLibrary.GetDelegate<SQLite3.OpenV2Delegate>("sqlite3_open_v2"),
+                OpenV2Bytes = _sqliteLibrary.GetDelegate<SQLite3.OpenV2BytesDelegate>("sqlite3_open_v2"),
+                Open16 = _sqliteLibrary.GetDelegate<SQLite3.Open16Delegate>("sqlite3_open16"),
+                EnableLoadExtension = _sqliteLibrary.GetDelegate<SQLite3.EnableLoadExtensionDelegate>("sqlite3_enable_load_extension"),
+                Close = _sqliteLibrary.GetDelegate<SQLite3.CloseDelegate>("sqlite3_close"),
+                Close2 = _sqliteLibrary.GetDelegate<SQLite3.Close2Delegate>("sqlite3_close_v2"),
+                Initialize = _sqliteLibrary.GetDelegate<SQLite3.InitializeDelegate>("sqlite3_initialize"),
+                Shutdown = _sqliteLibrary.GetDelegate<SQLite3.ShutdownDelegate>("sqlite3_shutdown"),
+                Config = _sqliteLibrary.GetDelegate<SQLite3.ConfigDelegate>("sqlite3_config"),
+                SetDirectory = _sqliteLibrary.GetDelegate<SQLite3.SetDirectoryDelegate>("sqlite3_win32_set_directory"),
+                BusyTimeout = _sqliteLibrary.GetDelegate<SQLite3.BusyTimeoutDelegate>("sqlite3_busy_timeout"),
+                Changes = _sqliteLibrary.GetDelegate<SQLite3.ChangesDelegate>("sqlite3_changes"),
+                Prepare2String = _sqliteLibrary.GetDelegate<SQLite3.Prepare2StringDelegate>("sqlite3_prepare_v2"),
+#if NETFX_CORE
+                Prepare2Bytes = SqliteLibrary.GetDelegate<SQLite3.Prepare2BytesDelegate>("sqlite3_prepare_v2"),
+#endif
+                Step = _sqliteLibrary.GetDelegate<SQLite3.StepDelegate>("sqlite3_step"),
+                Reset = _sqliteLibrary.GetDelegate<SQLite3.ResetDelegate>("sqlite3_reset"),
+                Finalize = _sqliteLibrary.GetDelegate<SQLite3.FinalizeDelegate>("sqlite3_finalize"),
+                LastInsertRowid = _sqliteLibrary.GetDelegate<SQLite3.LastInsertRowidDelegate>("sqlite3_last_insert_rowid"),
+                Errmsg = _sqliteLibrary.GetDelegate<SQLite3.ErrmsgDelegate>("sqlite3_errmsg16"),
+                BindParameterIndex = _sqliteLibrary.GetDelegate<SQLite3.BindParameterIndexDelegate>("sqlite3_bind_parameter_index"),
+                BindNull = _sqliteLibrary.GetDelegate<SQLite3.BindNullDelegate>("sqlite3_bind_null"),
+                BindInt = _sqliteLibrary.GetDelegate<SQLite3.BindIntDelegate>("sqlite3_bind_int"),
+                BindInt64 = _sqliteLibrary.GetDelegate<SQLite3.BindInt64Delegate>("sqlite3_bind_int64"),
+                BindDouble = _sqliteLibrary.GetDelegate<SQLite3.BindDoubleDelegate>("sqlite3_bind_double"),
+                BindText = _sqliteLibrary.GetDelegate<SQLite3.BindTextDelegate>("sqlite3_bind_text16"),
+                BindBlob = _sqliteLibrary.GetDelegate<SQLite3.BindBlobDelegate>("sqlite3_bind_blob"),
+                ColumnCount = _sqliteLibrary.GetDelegate<SQLite3.ColumnCountDelegate>("sqlite3_column_count"),
+                ColumnName = _sqliteLibrary.GetDelegate<SQLite3.ColumnNameDelegate>("sqlite3_column_name"),
+                ColumnName16Internal = _sqliteLibrary.GetDelegate<SQLite3.ColumnName16InternalDelegate>("sqlite3_column_name16"),
+                ColumnType = _sqliteLibrary.GetDelegate<SQLite3.ColumnTypeDelegate>("sqlite3_column_type"),
+                ColumnInt = _sqliteLibrary.GetDelegate<SQLite3.ColumnIntDelegate>("sqlite3_column_int"),
+                ColumnInt64 = _sqliteLibrary.GetDelegate<SQLite3.ColumnInt64Delegate>("sqlite3_column_int64"),
+                ColumnDouble = _sqliteLibrary.GetDelegate<SQLite3.ColumnDoubleDelegate>("sqlite3_column_double"),
+                ColumnText = _sqliteLibrary.GetDelegate<SQLite3.ColumnTextDelegate>("sqlite3_column_text"),
+                ColumnText16 = _sqliteLibrary.GetDelegate<SQLite3.ColumnText16Delegate>("sqlite3_column_text16"),
+                ColumnBlob = _sqliteLibrary.GetDelegate<SQLite3.ColumnBlobDelegate>("sqlite3_column_blob"),
+                ColumnBytes = _sqliteLibrary.GetDelegate<SQLite3.ColumnBytesDelegate>("sqlite3_column_bytes"),
+                GetResult = _sqliteLibrary.GetDelegate<SQLite3.GetResultDelegate>("sqlite3_errcode"),
+                ExtendedErrCode = _sqliteLibrary.GetDelegate<SQLite3.ExtendedErrCodeDelegate>("sqlite3_extended_errcode"),
+                LibVersionNumber = _sqliteLibrary.GetDelegate<SQLite3.LibVersionNumberDelegate>("sqlite3_libversion_number"),
+                BackupInit = _sqliteLibrary.GetDelegate<SQLite3.BackupInitDelegate>("sqlite3_backup_init"),
+                BackupStep = _sqliteLibrary.GetDelegate<SQLite3.BackupStepDelegate>("sqlite3_backup_step"),
+                BackupFinish = _sqliteLibrary.GetDelegate<SQLite3.BackupFinishDelegate>("sqlite3_backup_finish")
+            };
+
+            SQLite3.DllCallbacks = callbacks;
+        }
     }
 }

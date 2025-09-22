@@ -12,7 +12,7 @@ public class ExtendedLogEventArgs : LogEventArgs
 
     public static ExtendedLogEventArgs CreateNewHolder(LogEventArgs eventArgs, string stacktrace = null)
     {
-        var uuid = (ulong)Interlocked.Increment(ref _logCounter);
+        var uuid = Interlocked.Increment(ref _logCounter);
         var timestamp = DateTime.UtcNow;
         var tick = (uint)Environment.TickCount;
         var thread = Thread.CurrentThread;
@@ -34,7 +34,7 @@ public class ExtendedLogEventArgs : LogEventArgs
         return (eventArgs.Level & sourceMask) == 0;
     }
 
-    public readonly ulong Uuid;
+    public readonly long Uuid;
 
     public readonly DateTime Timestamp;
 
@@ -49,7 +49,7 @@ public class ExtendedLogEventArgs : LogEventArgs
 
     public readonly bool IsFiltered;
 
-    protected ExtendedLogEventArgs(LogEventArgs eventArgs, ulong uuid, DateTime timestamp, int? frame, uint tick, int threadID, string threadName, string stackTrace, bool isFiltered) : base(eventArgs.Data, eventArgs.Level, eventArgs.Source)
+    protected ExtendedLogEventArgs(LogEventArgs eventArgs, long uuid, DateTime timestamp, int? frame, uint tick, int threadID, string threadName, string stackTrace, bool isFiltered) : base(eventArgs.Data, eventArgs.Level, eventArgs.Source)
     {
         Uuid = uuid;
         Timestamp = timestamp;
