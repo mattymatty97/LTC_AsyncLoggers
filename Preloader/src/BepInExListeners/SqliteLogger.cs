@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
@@ -8,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using AsyncLoggers.Config;
 using AsyncLoggers.Proxy.WinAPI;
+using AsyncLoggers.Sqlite;
 using BepInEx;
 using SQLite;
 
@@ -16,12 +18,6 @@ namespace AsyncLoggers.BepInExListeners
     
     internal static class SqliteLogger
     {
-        const string EolUrl            = "https://endoflife.date/api/v1/products/sqlite/releases/latest";
-        const string DownloadUrl       = "https://www.sqlite.org/{0}/sqlite-dll-win-x64-{1}.zip";
-        const string DownloadFileName  = "sqlite-dll-win-x64-{0}.zip";
-        const string DLLFileName       = "sqlite3.dll";
-        const int    MinLibraryVersion = 350004;
-
         private static Kernel32.NativeLibrary _sqliteLibrary;
 
         internal static bool Enabled { get; set; }
@@ -36,10 +32,19 @@ namespace AsyncLoggers.BepInExListeners
                 Enabled = false;
                 return;
             }
-            
-            var hasSqlite = EnsureSqliteLibrary();
 
-            if (!hasSqlite)
+            try
+            {
+                _sqliteLibrary = SQLiteLoader.EnsureSqliteLibrary();
+                
+                InitializeCallbacks();
+            }
+            catch (Exception ex)
+            {
+                AsyncLoggers.Log.LogError($"Exception initializing SQLite library:\n{ex}");
+            }
+
+            if (_sqliteLibrary == null)
             {
                 if (PluginConfig.DbLogger.Enabled.Value)
                     AsyncLoggers.Log.LogError("Could not load SQLite library! DBLogger will be forcefully disabled!");
@@ -140,121 +145,6 @@ namespace AsyncLoggers.BepInExListeners
                 public string modVersion { get; set; }
             }
         }
-        
-        private static bool EnsureSqliteLibrary()
-        {
-            
-            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return false;
-
-            //try to load the library
-            var hasSqlite = LoadSqliteLibrary();
-            
-            //download library
-            if (!hasSqlite)
-            {
-                DownloadSqliteLibrary();
-                //try to load the library again
-                hasSqlite = LoadSqliteLibrary();
-            }
-            
-            //if we have the library load all delegates
-            if (hasSqlite)
-            {
-                InitializeCallbacks();
-            }
-            
-            return hasSqlite;
-        }
-
-        private static bool LoadSqliteLibrary()
-        {
-            var cacheFolder = Path.Combine(Paths.BepInExRootPath, "cache", AsyncLoggers.NAME);
-            var dllPath = Path.Combine(cacheFolder, DLLFileName);
-            // Check if the dll exists
-            if (File.Exists(dllPath))
-            {   
-                //try to load it
-                _sqliteLibrary = new Kernel32.NativeLibrary(dllPath);
-                if (_sqliteLibrary.IsLoaded)
-                {
-                    //try to grab the library version
-                    var versionDelegate = _sqliteLibrary.GetDelegate<SQLite3.LibVersionNumberDelegate>("sqlite3_libversion_number");
-                    if (versionDelegate != null)
-                    {
-                        try
-                        {
-                            var version = versionDelegate();
-                            if (version >= MinLibraryVersion)
-                                return true;
-                            AsyncLoggers.Log.LogWarning($"SQLite library is outdated! {version}");
-                        }
-                        catch (Exception ex)
-                        {
-                            AsyncLoggers.Log.LogError("Exception while reading sqlite version: \n" + ex);
-                        }
-                    }
-                    else
-                        AsyncLoggers.Log.LogWarning("SQLite library does not have a version! ( Wrong DLL? )");
-                }
-                else
-                    AsyncLoggers.Log.LogWarning("could not load SQLite library!");
-            }
-            else
-                AsyncLoggers.Log.LogWarning("missing SQLite library!");
-            
-            return false;
-        }
-
-        private static void DownloadSqliteLibrary()
-        {
-            var cacheFolder = Path.Combine(Paths.BepInExRootPath, "cache", AsyncLoggers.NAME);
-            var eolRegex = new Regex("\"latest\":{\"name\":\"(\\d+\\.\\d+\\.\\d+)\",\"date\":\"(\\d+-\\d+-\\d+)\"");
-            
-            try
-            {
-                var eolJson = WinHttp.DownloadAsText(EolUrl);
-                
-                AsyncLoggers.Log.LogWarning(eolJson);
-                
-                var matches = eolRegex.Matches(eolJson);
-                
-                if (matches.Count == 0)
-                    return;
-                
-                var match = matches[0];
-                
-                AsyncLoggers.Log.LogWarning(match.Groups[1].Value);
-                AsyncLoggers.Log.LogWarning(match.Groups[2].Value);
-                
-                var version = match.Groups[1].Value.Split(".");
-                var date = match.Groups[2].Value.Split("-");
-                var sb = new StringBuilder(version[0]);
-                for (var i = 1; i < 4; i++)
-                {
-                    var val = i < version.Length ? int.Parse(version[i]) : 0;
-                    sb.Append(val.ToString("D2"));
-                }
-                var versionString = sb.ToString();
-                AsyncLoggers.Log.LogWarning(versionString);
-                
-                var downloadUrl = string.Format(DownloadUrl, date[0], versionString);
-                var downloadFileName = string.Format(DownloadFileName, versionString);
-                
-                Directory.CreateDirectory(cacheFolder);
-                
-                WinHttp.DownloadFile(downloadUrl, downloadFileName);
-
-                using var zipStream = File.OpenRead(downloadFileName);
-                using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
-                archive.ExtractToDirectory(cacheFolder);
-            }
-            catch (Exception ex)
-            {
-                AsyncLoggers.Log.LogError("Exception while downloading sqlite library: \n" + ex);
-            }
-        }
-        
         
         private static void InitializeCallbacks()
         {

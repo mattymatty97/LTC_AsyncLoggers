@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Runtime.InteropServices;
@@ -7,82 +8,144 @@ namespace AsyncLoggers.Proxy.WinAPI;
 
 public static class Kernel32
 {
-    [DllImport("kernel32.dll", SetLastError = true)]
+    public const string DllName = "kernel32.dll";
+    
+    [DllImport(DllName, EntryPoint = "LoadLibrary", SetLastError = true)]
     private static extern IntPtr LoadLibrary(string dllToLoad);
     
-    [DllImport("kernel32.dll", SetLastError = true)]
+    [DllImport(DllName, EntryPoint = "FreeLibrary", SetLastError = true)]
     private static extern bool FreeLibrary(IntPtr hModule);
     
-    [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Ansi)]
-    private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+    [DllImport(DllName, EntryPoint = "GetProcAddress", SetLastError = true, CharSet = CharSet.Ansi)]
+    private static extern IntPtr GetFunctionAddress(IntPtr hModule, string funcName);
+
     
     public class NativeLibrary : IDisposable
     {
-        private IntPtr _handle;
+        public IntPtr Address { get; private set; }
         public string Name { get; }
-        public bool IsLoaded => _handle != IntPtr.Zero;
+        public bool IsLoaded => Address != IntPtr.Zero;
         public int LastError { get; private set; }
+        
         
         public NativeLibrary(string dllToLoad)
         {
             Name = dllToLoad;
-            _handle = LoadLibrary(dllToLoad);
-            if (_handle == IntPtr.Zero)
-                LastError = Marshal.GetLastWin32Error();
+            Address = LoadLibrary(dllToLoad);
+            if (Address == IntPtr.Zero)
+                throw new Win32Exception($"Could not load library {dllToLoad}");
         }
 
-        public T GetRawDelegate<T>(string procName) where T : Delegate
+        public bool TryGetExportedFunctionOffset(string funcName, out ulong offset)
+        {
+            var ret = TryGetExportedFunctionAddress(funcName, out var address);
+            offset = ret ? address - (ulong)Address : 0;
+            return ret;
+        }
+        
+        public bool TryGetExportedFunctionAddress(string funcName, out ulong address)
         {
             if (!IsLoaded)
                 throw new DllNotFoundException($"{Name} is not loaded");
             
-            var procAddress = GetProcAddress(_handle, procName);
-            
-            if (procAddress == IntPtr.Zero)
+            address = (ulong)GetFunctionAddress(Address, funcName);
+            if (address == 0)
             {
                 LastError = Marshal.GetLastWin32Error();
-                return null;
+                return false;
             }
             
-            return Marshal.GetDelegateForFunctionPointer<T>(procAddress);
+            return true;
         }
         
-        public T GetDelegate<T>(string procName) where T : Delegate
-        {
-            var fn = GetRawDelegate<T>(procName);
-            var lib = Expression.Constant(this);
-            var isLoadedProp = Expression.Property(lib, nameof(IsLoaded));
-
-            var invoke = typeof(T).GetMethod("Invoke")!;
-            var parameters = invoke.GetParameters()
-                .Select(p => Expression.Parameter(p.ParameterType, p.Name))
-                .ToArray();
-            
-            var args = parameters.Cast<Expression>();
-
-            var body = Expression.Block(
-                Expression.IfThen(
-                    Expression.IsFalse(isLoadedProp),
-                    Expression.Throw(Expression.New(
-                        typeof(ObjectDisposedException).GetConstructor([typeof(string)])!,
-                        Expression.Constant($"NativeLibrary({Name})")))
-                ),
-                Expression.Invoke(Expression.Constant(fn), args)
-            );
-
-            return Expression.Lambda<T>(body, parameters).Compile();
-        }
-
         public void Dispose()
         {
-            if (_handle != IntPtr.Zero)
+            if (Address != IntPtr.Zero)
             {
-                FreeLibrary(_handle);
-                _handle = IntPtr.Zero;
+                FreeLibrary(Address);
+                Address = IntPtr.Zero;
             }
             GC.SuppressFinalize(this);
         }
 
         ~NativeLibrary() => Dispose();
+    }
+    
+    public struct NativeFunction<T> where T : class
+    {
+        public NativeLibrary Library { get; }
+        
+        public string Name { get; }
+        
+        public IntPtr Address { get; }
+        
+        
+        public ulong Offset => (ulong)Address.ToInt64() - (ulong)Library.Address.ToInt64();
+        
+        
+        private T _delegate = null;
+        
+        public T Delegate
+        {
+            get
+            {
+                if (_delegate == null)
+                {
+                    _delegate = Marshal.GetDelegateForFunctionPointer<T>(Address);
+                }
+
+                return _delegate;
+            }
+        }
+
+        private T _safeDelegate = null;
+        
+        public T SafeDelegate
+        {
+            get
+            {
+                if (_safeDelegate == null)
+                {
+                    var lib = Expression.Constant(Library);
+                    var isLoadedProp = Expression.Property(lib, nameof(NativeLibrary.IsLoaded));
+
+                    var invoke = typeof(T).GetMethod("Invoke")!;
+                    var parameters = invoke.GetParameters()
+                        .Select(p => Expression.Parameter(p.ParameterType, p.Name))
+                        .ToArray();
+        
+                    var args = parameters.Cast<Expression>();
+
+                    var body = Expression.Block(
+                        Expression.IfThen(
+                            Expression.IsFalse(isLoadedProp),
+                            Expression.Throw(Expression.New(
+                                typeof(ObjectDisposedException).GetConstructor([typeof(string)])!,
+                                Expression.Constant($"NativeLibrary({Name})")))
+                        ),
+                        Expression.Invoke(Expression.Constant(Delegate), args)
+                    );
+            
+                    _safeDelegate = Expression.Lambda<T>(body, parameters).Compile();
+                }
+
+                return _safeDelegate;
+            }
+        }
+
+        public NativeFunction(NativeLibrary library,string functionName,  IntPtr address)
+        {
+            Library = library;
+            Name = functionName;
+            Address = address;
+            
+        }
+        
+        public NativeFunction(NativeLibrary library, string functionName, ulong offset)
+        {
+            Library = library;
+            Name = functionName;
+            Address = (IntPtr)((ulong)library.Address.ToInt64() + offset);
+        }
     }
 }

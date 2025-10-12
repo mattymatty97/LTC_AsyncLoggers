@@ -5,7 +5,7 @@ using System.Text;
 
 namespace AsyncLoggers.Proxy.WinAPI;
 
-public class WinHttp
+internal static class WinHttp
 {
     private const uint WINHTTP_FLAG_SECURE = 0x00800000U;
 
@@ -104,7 +104,7 @@ public class WinHttp
         }
     }
 
-    public static void DownloadFile(string url, string filePath)
+    internal static void DownloadFile(string url, string filePath)
     {
         using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
         {
@@ -112,7 +112,7 @@ public class WinHttp
         }
     }
 
-    public static string DownloadAsText(string url)
+    internal static string DownloadAsText(string url)
     {
         using (var ms = new MemoryStream())
         {
