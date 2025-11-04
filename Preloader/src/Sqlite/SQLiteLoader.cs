@@ -52,15 +52,19 @@ public static class SQLiteLoader
             {
                 _sqliteLibrary = new Kernel32.NativeLibrary(dllPath);
 
+                var versionNumberDelegate =
+                    _sqliteLibrary.GetSafeDelegate<SQLite3.LibVersionNumberDelegate>("sqlite3_libversion_number");
+                
+                var versionStringDelegate = 
+                    _sqliteLibrary.GetSafeDelegate<SQLite3.LibVersionDelegate>("sqlite3_libversion");
                 //try to grab the library version
-                if (_sqliteLibrary.TryGetExportedFunctionAddress("sqlite3_libversion_number",
-                        out var versionNumberAddress))
+                if (versionNumberDelegate != null)
                 {
-                    var versionDelegate = new Kernel32.NativeFunction<SQLite3.LibVersionNumberDelegate>(_sqliteLibrary,
-                        "sqlite3_libversion_number", versionNumberAddress);
                     try
                     {
-                        var version = versionDelegate.Delegate();
+                        var version = versionNumberDelegate();
+                        
+                        AsyncLoggers.Log.LogInfo($"Found SQLite library {(versionStringDelegate != null ? Marshal.PtrToStringAnsi(versionStringDelegate()) : version)}");
                         if (version >= MinLibraryVersion)
                             return true;
                         AsyncLoggers.Log.LogWarning($"SQLite library is outdated! {version}");

@@ -1,3 +1,6 @@
+# v2.2.2
+- fix crashes in v2.2.1 🤷‍♂️
+
 # v2.2.1
 - download sqlite library from sqlite.org using P/Invoke on winhttp.dll
 - fix missing primary Log Sources

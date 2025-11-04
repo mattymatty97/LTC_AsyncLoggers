@@ -4762,6 +4762,7 @@ namespace SQLite
 		public delegate Result GetResultDelegate(Sqlite3DatabaseHandle db);
 		public delegate ExtendedResult ExtendedErrCodeDelegate(IntPtr db);
 		public delegate int LibVersionNumberDelegate();
+		public delegate IntPtr LibVersionDelegate();
 		public delegate Sqlite3BackupHandle BackupInitDelegate(Sqlite3DatabaseHandle destDb, [MarshalAs (UnmanagedType.LPStr)] string destName, Sqlite3DatabaseHandle sourceDb, [MarshalAs (UnmanagedType.LPStr)] string sourceName);
 		public delegate Result BackupStepDelegate(Sqlite3BackupHandle backup, int numPages);
 		public delegate Result BackupFinishDelegate(Sqlite3BackupHandle backup);
