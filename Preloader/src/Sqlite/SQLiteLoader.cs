@@ -116,7 +116,7 @@ public static class SQLiteLoader
             }
 
             var versionString = sb.ToString();
-            AsyncLoggers.Log.LogDebug($"Lateral SQLite version: {versionString}");
+            AsyncLoggers.Log.LogDebug($"Latest SQLite version: {versionString}");
 
             var downloadUrl = string.Format(DownloadUrl, date[0], versionString);
             var downloadFileName = string.Format(DownloadFileName, versionString);
@@ -128,7 +128,7 @@ public static class SQLiteLoader
 
             using var zipStream = File.OpenRead(downloadFileName);
             using var archive = new ZipArchive(zipStream, ZipArchiveMode.Read);
-            archive.ExtractToDirectory(cacheFolder);
+            archive.ExtractToDirectory(cacheFolder, true);
         }
         catch (Exception ex)
         {

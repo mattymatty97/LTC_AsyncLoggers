@@ -106,18 +106,14 @@ internal static class WinHttp
 
     internal static void DownloadFile(string url, string filePath)
     {
-        using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
-        {
-            DownloadToStream(url, fs);
-        }
+        using var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write);
+        DownloadToStream(url, fs);
     }
 
     internal static string DownloadAsText(string url)
     {
-        using (var ms = new MemoryStream())
-        {
-            DownloadToStream(url, ms);
-            return Encoding.UTF8.GetString(ms.ToArray());
-        }
+        using var ms = new MemoryStream();
+        DownloadToStream(url, ms);
+        return Encoding.UTF8.GetString(ms.ToArray());
     }
 }

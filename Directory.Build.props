@@ -2,7 +2,7 @@
 <Project>
     <PropertyGroup>
         <!-- Common Versioning and Module Information -->
-        <Version>2.2.2</Version>
+        <Version>2.2.3</Version>
         <ModName>AsyncLoggers</ModName>
         <ModGUID>mattymatty.AsyncLoggers</ModGUID>
         <ModNameSpace>AsyncLoggers</ModNameSpace>

@@ -1,3 +1,6 @@
+# v2.2.3
+- fix crash when quitting the game caused by early Garbage Collection
+
 # v2.2.2
 - fix crashes in v2.2.1 🤷‍♂️
 

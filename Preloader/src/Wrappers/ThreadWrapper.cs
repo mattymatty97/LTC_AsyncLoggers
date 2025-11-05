@@ -60,7 +60,7 @@ namespace AsyncLoggers.Wrappers
                     }
                     catch (Exception ex)
                     {
-                        if (ex is ThreadInterruptedException || ex is ThreadAbortException)
+                        if (ex is ThreadInterruptedException or ThreadAbortException)
                         {
                             _shouldRun = () => false;
                             break;
@@ -73,6 +73,9 @@ namespace AsyncLoggers.Wrappers
                         {
                             Console.WriteLine($"Exception while logging: {ex}");
                         }
+                        
+                        if (_shouldRun != DefaultCondition) 
+                            break;
                     }
                 }
 

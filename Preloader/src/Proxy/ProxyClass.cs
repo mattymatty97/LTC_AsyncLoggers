@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace AsyncLoggers.Proxy;
 
-internal class ProxyClass
+internal static class ProxyClass
 {
     [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
     public static void AppendQuittingCallback()

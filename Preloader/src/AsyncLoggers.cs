@@ -12,6 +12,7 @@ using AsyncLoggers.Wrappers;
 using BepInEx;
 using BepInEx.Logging;
 using HarmonyLib;
+using JetBrains.Annotations;
 using Mono.Cecil;
 using MonoMod.RuntimeDetour;
 using Logger = BepInEx.Logging.Logger;
@@ -141,6 +142,7 @@ public static class AsyncLoggers
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    [UsedImplicitly]
     internal static void VerboseLog(LogLevel level, Func<string> logline)
     {
         //TODO: Add config for this logtype
@@ -149,6 +151,7 @@ public static class AsyncLoggers
     }
 
     [Obsolete("RegisterIgnoredILogListener is deprecated please use RegisterSyncListener instead")]
+    [UsedImplicitly]
     public static void RegisterIgnoredILogListener(ILogListener toIgnore)
     {
         API.AsyncLoggersAPI.UpdateListenerFlags(toIgnore, API.AsyncLoggersAPI.LogListenerFlags.SyncHandling);
